@@ -6,7 +6,7 @@ Construir o **InfoHub → InovAMF**, um sistema web que digitaliza o acompanhame
 
 Este é o projeto prático da disciplina de **Arquitetura de Sistemas** (graduação em Sistemas de Informação, FAMF). A disciplina é guiada em fases: a **Fase 1 (este plano)** entrega o sistema como **monolito**; fases futuras (fora deste PLAN.md, tratadas em revisões posteriores) irão refatorar incrementalmente partes do monolito para arquiteturas mais avançadas (ex.: extrair o disparo de notificações para um worker/fila dedicado, separar módulos em serviços independentes), conforme o conteúdo da cadeira avançar.
 
-Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), cobrindo o fluxo completo do documento de requisitos (`docs/Infohub_InovAMF_Requisitos.md`) — cadastro do aluno, funil de 6 etapas, tarefas com upload de arquivo, lembretes por e-mail e dashboard — com autenticação e persistência real em Postgres via TypeORM.
+Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), cobrindo o fluxo completo do documento de requisitos (`docs/Infohub_InovAMF_Requisitos.md`) — cadastro do aluno, funil de 6 etapas, tarefas com upload de arquivo, lembretes por e-mail e dashboard — com autenticação e persistência real em Postgres via Prisma.
 
 ## 2. Non Goals
 
@@ -33,8 +33,8 @@ Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), co
 
 ## 4. Constraints
 
-- **Stack obrigatória** (decisão da dupla, registrada em `decisoes.md`): Next.js (App Router, API Routes/Server Actions) + TypeScript + **TypeORM** + PostgreSQL.
-  - ORM: TypeORM foi escolhido pela dupla. Trade-off assumido: TypeORM tem integração menos "nativa" com ambientes serverless/edge (pool de conexões, cold starts) comparado a drivers mais leves, e sua tipagem/DX é historicamente menos polida que a do Prisma — aceito em troca de decorators/Active Record ou Data Mapper familiares a quem já viu ORMs orientados a objeto em outras linguagens (ex.: Hibernate).
+- **Stack obrigatória** (decisão da dupla, registrada em `decisoes.md`): Next.js (App Router, API Routes/Server Actions) + TypeScript + **Prisma** + PostgreSQL.
+  - ORM: Prisma foi escolhido pela dupla, revisando a decisão inicial (TypeORM), devido ao baixo nível de familiaridade da turma com ORMs. Trade-off assumido: schema centralizado em um único arquivo (menos flexível para modelagem orientada a objetos), etapa extra de `prisma generate` no fluxo de build — aceito em troca de tipagem gerada automaticamente, curva de aprendizado mais suave e documentação mais didática.
 - **Arquitetura**: monolito único, um único processo de deploy. Módulos internos devem ser organizados em camadas/pastas claramente separadas (ver Seção 5) para que a refatoração futura para arquiteturas mais avançadas seja possível sem reescrever tudo.
 - **Autenticação**: dois tipos de login (aluno vs. administrador/mentor), e-mail+senha, com hashing de senha (bcrypt/argon2) — sem exigência de SSO/OAuth institucional nesta fase.
 - **LGPD (RNF-02)**: consentimento explícito no formulário de cadastro do aluno; dados pessoais tratados com política de retenção documentada.
@@ -62,13 +62,13 @@ src/
     reports/                # dashboard, agregações, export CSV
     audit/                  # log de auditoria (RNF-05)
   infra/
-    db/                     # data source TypeORM, entities, migrations
+    db/                     # cliente Prisma, schema.prisma, migrations
     email/                  # cliente do serviço transacional de e-mail
     storage/                # cliente de blob storage
   shared/                 # tipos, utils, validação (zod) compartilhados
 ```
 
-- **Fluxo de dados**: UI (Server/Client Components) → Server Actions/Route Handlers → camada de `modules/*` (regras de negócio) → TypeORM repositories → Postgres.
+- **Fluxo de dados**: UI (Server/Client Components) → Server Actions/Route Handlers → camada de `modules/*` (regras de negócio) → Prisma Client → Postgres.
 - **Notificações (RF-17/18)**: dentro do monolito, um job agendado (cron da Vercel ou equivalente) varre tarefas com lembretes configurados e dispara e-mails via `infra/email`. Este é o módulo mais provável de virar um worker/fila separado em fases futuras da disciplina — por isso já nasce isolado em `modules/notifications`.
 - **Auditoria**: toda mudança de etapa, aprovação/reprovação de tarefa e disparo de e-mail grava um registro em `modules/audit`, consumido pelo dashboard e por trilhas de rastreabilidade (RNF-05).
 - **Máquina de estados do funil**: `modules/journey` centraliza as transições válidas entre as 6 etapas (RN-01), evitando que a lógica de avanço/retrocesso fique espalhada pela UI.
@@ -77,7 +77,7 @@ src/
 ## 6. Definition of Done
 
 - **Build**: `npm run build` completa sem erros; `npm run lint` e `tsc --noEmit` sem erros.
-- **Banco**: migrations do TypeORM aplicam limpo em um Postgres vazio (`npm run migration:run`); seed mínimo (1 admin, 1 aluno, 1 equipe de exemplo) disponível via script.
+- **Banco**: migrations do Prisma aplicam limpo em um Postgres vazio (`npx prisma migrate deploy`); seed mínimo (1 admin, 1 aluno, 1 equipe de exemplo) disponível via script.
 - **Testes**: suíte de testes cobre pelo menos a máquina de estados do funil (`modules/journey`) e as regras de negócio críticas (RN-01 a RN-04); `npm test` passa.
 - **Rodar localmente**: `npm run dev` sobe a aplicação; login de aluno e de admin funcionam; fluxo completo executável manualmente: aluno se cadastra (Etapa 1) → admin avança até Etapa 6 aprovando tarefas → equipe marcada como "Pronta para o InovAMF".
 - **Validação de usuário**: checklist manual de RF-01 a RF-24 executado uma vez contra a aplicação rodando, com resultado documentado (mesmo que informalmente, em um checklist).
@@ -94,22 +94,22 @@ src/
 - **Validation Steps:** `npm install && npm run build && npm run dev`
 - **Notes:**
 
-### Ticket: T002 Configurar Postgres + TypeORM (data source e conexão)
+### Ticket: T002 Configurar Postgres + Prisma (client e conexão)
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Configurar `infra/db/data-source.ts` com TypeORM apontando para Postgres (local via Docker Compose ou Neon), variáveis de ambiente em `.env`.
+- **Scope:** Inicializar Prisma (`npx prisma init`), configurar `infra/db/schema.prisma` apontando para Postgres (local via Docker Compose ou Neon), variáveis de ambiente em `.env`.
 - **Acceptance Criteria:** Aplicação conecta ao banco na inicialização sem erro; conexão testável via script simples.
 - **Validation Steps:** Script `npm run db:check` (ou equivalente) conecta e retorna sucesso.
 - **Notes:** Registrar em `decisoes.md` a escolha entre Postgres local (Docker) vs. Neon para desenvolvimento.
 
-### Ticket: T003 Modelagem de entidades TypeORM (schema inicial)
+### Ticket: T003 Modelagem de modelos Prisma (schema inicial)
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Criar entities TypeORM para: `User` (admin/mentor/aluno), `Team`, `TeamMember`, `Idea`, `JourneyStage`/`TeamStageStatus`, `Task`, `TaskSubmission` (arquivo), `AuditLog`.
-- **Acceptance Criteria:** Entities cobrem os campos descritos na Seção 4.2 e 4.4 do documento de requisitos; migration inicial gerada.
-- **Validation Steps:** `npm run migration:generate -- InitialSchema` roda sem erro; `npm run migration:run` aplica em banco limpo.
+- **Scope:** Definir models no `schema.prisma` para: `User` (admin/mentor/aluno), `Team`, `TeamMember`, `Idea`, `JourneyStage`/`TeamStageStatus`, `Task`, `TaskSubmission` (arquivo), `AuditLog`.
+- **Acceptance Criteria:** Models cobrem os campos descritos na Seção 4.2 e 4.4 do documento de requisitos; migration inicial gerada.
+- **Validation Steps:** `npx prisma migrate dev --name initial_schema` roda sem erro em banco limpo; `npx prisma generate` executa sem erro.
 - **Notes:**
 
 ### Ticket: T004 Autenticação (login separado aluno/admin)

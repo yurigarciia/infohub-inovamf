@@ -16,7 +16,7 @@ Este repositório é o projeto prático da disciplina de **Arquitetura de Sistem
 ## Stack (Fase 1 — monolito)
 
 - **Next.js** (App Router) + **TypeScript**
-- **TypeORM** como ORM, sobre **PostgreSQL** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
+- **Prisma** como ORM, sobre **PostgreSQL** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
 - Deploy alvo: Vercel + Postgres gerenciado
 
 ## Estrutura do projeto
@@ -25,7 +25,7 @@ Este repositório é o projeto prático da disciplina de **Arquitetura de Sistem
 src/
   app/          # Next.js App Router — páginas e rotas (público, aluno, admin)
   modules/      # Núcleo de domínio por contexto: auth, teams, journey, tasks, files, notifications, reports, audit
-  infra/        # Integrações técnicas: banco (TypeORM), e-mail, storage
+  infra/        # Integrações técnicas: banco (Prisma), e-mail, storage
   shared/       # Tipos e utilitários compartilhados
 docs/           # Documentação de requisitos
 ```
@@ -39,7 +39,7 @@ A separação em `modules/` por contexto de negócio existe propositalmente para
 ```bash
 npm install
 cp .env.example .env   # configurar conexão com Postgres, e-mail e storage
-npm run migration:run
+npx prisma migrate deploy
 npm run seed
 npm run dev
 ```

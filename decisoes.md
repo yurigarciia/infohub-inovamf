@@ -11,18 +11,19 @@ Antes de codar, cada dupla registra sua escolha de Banco de dados e ORM (usar ne
 Sim.
 
 **02 — Qual?**
-TypeORM.
+Prisma. (Decisão revisada: a escolha inicial havia sido TypeORM, substituída por Prisma devido ao baixo nível de familiaridade da turma com ORMs — ver trade-offs abaixo.)
 
 **03 — Por quê?**
-- Modelagem orientada a objetos via decorators (entities), próxima do que já é visto em outras cadeiras com Hibernate/JPA — curva de aprendizado menor para quem vem desse background.
-- Suporte a dois padrões (Active Record e Data Mapper), permitindo escolher o estilo mais didático para o projeto.
-- Migrations integradas, evitando alterar o schema do Postgres manualmente.
-- Integração natural com TypeScript e com o backend em Next.js (API Routes/Server Actions) definido para o projeto.
+- Curva de aprendizado mais suave para quem está tendo o primeiro contato com ORM: schema declarativo único (`schema.prisma`), sem decorators nem configuração de metadata reflection.
+- Tipagem gerada automaticamente a partir do schema (Prisma Client), reduzindo erros só percebidos em runtime — importante para uma turma com baixa familiaridade.
+- Documentação e mensagens de erro consideradas as mais didáticas entre os ORMs de Node/TypeScript, o que pesa em contexto acadêmico.
+- Migrations declarativas e simples de gerar (`prisma migrate dev`), com boa integração com Postgres e com Next.js.
 
 **04 — Qual trade-off vocês assumem?**
-- Tipagem e developer experience do TypeORM são historicamente menos polidas que as de ferramentas mais recentes (ex.: Prisma), com mais casos de erros só percebidos em runtime.
-- Menor alinhamento nativo com ambientes serverless/edge (pool de conexões, cold starts), o que exige atenção ao configurar o data source em produção (ex.: Vercel).
-- Mais "mágica" (decorators, metadata reflection) do que SQL puro ou um query builder simples (ex.: Knex), tornando o SQL gerado menos óbvio à primeira vista — aceito em troca de produtividade e migrations automáticas.
+- Menos flexível que TypeORM para modelagem orientada a objetos (sem Active Record, sem herança de entities) — o schema é centralizado em um único arquivo, o que pode ficar extenso conforme o domínio cresce.
+- Prisma Client é gerado em build step (`prisma generate`), adicionando uma etapa a mais no fluxo de desenvolvimento/CI que precisa ser lembrada.
+- Menor controle fino sobre queries complexas comparado a um query builder puro (ex.: Knex) ou SQL puro — para casos muito específicos pode ser necessário cair para `$queryRaw`.
+- Trocar a decisão após o planejamento inicial (de TypeORM para Prisma) tem custo de retrabalho nos tickets já descritos em `PLAN.md`, aceito aqui porque o projeto ainda não tinha código implementado.
 
 ---
 
