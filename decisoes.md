@@ -73,7 +73,7 @@ As regras do jogo:
 1 - Front + Back em um único projeto: toda a aplicação deve subir com um único comando (sem backend e frontend separado)
 2 - ENTREGA DE HOJE: arquivo .sql com o banco de dados completo  + o ORM definido
 
-**Entregue:** [`db/schema.sql`](db/schema.sql) (DDL completo) + [`prisma/schema.prisma`](prisma/schema.prisma) (ORM: Prisma).
+**Entregue:** [`db/schema.sql`](db/schema.sql) (DDL completo) + [`app/prisma/schema.prisma`](app/prisma/schema.prisma) (ORM: Prisma). *(schema.prisma movido para dentro de `app/` quando o projeto Next.js foi organizado nessa pasta — ver decisão abaixo.)*
 
 ------
 
@@ -84,3 +84,5 @@ Próximo entregável: interface completa (sem fluxos cadastrais/listagem com dad
 **Decisão — stack de UI:** Tailwind CSS + shadcn/ui. Motivo: componentes acessíveis prontos (dialog, tabs, table, form) aceleram montar todas as telas do funil sem abrir mão de qualidade visual; customizados com a paleta de cores do InfoHub (vermelho-bordô → laranja, extraída de `assets/logotipo.png`). Trade-off: componentes shadcn são copiados para dentro do repo (não é uma dependência fechada), então ficam livres para editar, mas aumentam a quantidade de arquivos em `src/components/ui`.
 
 **Entregue:** [`docs/frontend-plan.md`](docs/frontend-plan.md) — design system (paleta de cores, tipografia), escopo de telas mapeado às RF-01 a RF-24, arquitetura da camada de mocks/services (pensada para integração futura com o backend real) e backlog de 17 tickets (T-FE-01 a T-FE-17).
+
+**Decisão — reorganização de pastas:** ao montar o setup (T-FE-01), a aplicação Next.js inteira (package.json, src/, prisma/) foi movida para `app/` na raiz do repositório, em vez de ficar solta junto com `docs/`, `db/`, `decisoes.md` etc. Motivo: a raiz estava acumulando arquivos de natureza muito diferente (documentação acadêmica vs. código da aplicação) e ficaria pior conforme o projeto crescesse. A raiz ganhou um `package.json` mínimo que delega `npm run dev/build/lint` para dentro de `app/`, preservando a regra da disciplina de subir com um comando só a partir da raiz, sem back/front separados. Trade-off: um nível extra de indireção (a raiz não é mais o próprio projeto Next.js) — aceitável porque documentação e código continuam claramente separados.

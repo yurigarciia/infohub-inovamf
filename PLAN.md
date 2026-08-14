@@ -47,27 +47,32 @@ As perguntas Q1–Q7 do documento de requisitos (Seção 9) foram respondidas pe
 
 **Estilo**: Monolito modular em Next.js, com separação de camadas dentro do mesmo processo de deploy, preparando o terreno para extração futura de módulos.
 
+A aplicação Next.js (código, `package.json`, `prisma/`) vive em `app/` na raiz do repositório — a raiz fica reservada para documentação (`docs/`, `db/`, `PLAN.md`, `decisoes.md`). Um `package.json` na raiz delega `npm run dev/build/lint` para dentro de `app/`, então o projeto continua subindo com um único comando (`npm run dev` na raiz), sem back/front separados. Comandos específicos do Prisma (`npx prisma migrate dev`, etc.) rodam dentro de `app/`.
+
 ```
-src/
-  app/                    # Next.js App Router — páginas e rotas
-    (public)/              # login, cadastro do aluno (formulário inicial)
-    (aluno)/                # área do aluno: tarefas, envio de arquivos
-    (admin)/                # painel do administrador: funil, tarefas, relatórios
-    api/                    # Route Handlers (se necessário além de Server Actions)
-  modules/                # Núcleo de domínio, organizado por bounded context
-    auth/                   # autenticação, sessão, papéis (admin/mentor/aluno)
-    teams/                  # cadastro de equipe/ideia, integrantes
-    journey/                # funil de 6 etapas, transições de estado (RN-01)
-    tasks/                  # tarefas, prazos, status, aprovação/reprovação
-    files/                  # upload, versionamento de arquivos entregues
-    notifications/          # disparo de e-mail, agendamento de lembretes
-    reports/                # dashboard, agregações, export CSV
-    audit/                  # log de auditoria (RNF-05)
-  infra/
-    db/                     # cliente Prisma, schema.prisma, migrations
-    email/                  # cliente do serviço transacional de e-mail
-    storage/                # cliente de blob storage
-  shared/                 # tipos, utils, validação (zod) compartilhados
+app/
+  src/
+    app/                    # Next.js App Router — páginas e rotas
+      (public)/              # login, cadastro do aluno (formulário inicial)
+      (aluno)/                # área do aluno: tarefas, envio de arquivos
+      (admin)/                # painel do administrador: funil, tarefas, relatórios
+      api/                    # Route Handlers (se necessário além de Server Actions)
+    modules/                # Núcleo de domínio, organizado por bounded context
+      auth/                   # autenticação, sessão, papéis (admin/mentor/aluno)
+      teams/                  # cadastro de equipe/ideia, integrantes
+      journey/                # funil de 6 etapas, transições de estado (RN-01)
+      tasks/                  # tarefas, prazos, status, aprovação/reprovação
+      files/                  # upload, versionamento de arquivos entregues
+      notifications/          # disparo de e-mail, agendamento de lembretes
+      reports/                # dashboard, agregações, export CSV
+      audit/                  # log de auditoria (RNF-05)
+    infra/
+      db/                     # cliente Prisma
+      email/                  # cliente do serviço transacional de e-mail
+      storage/                # cliente de blob storage
+    shared/                 # tipos, utils, validação (zod) compartilhados
+    services/               # camada de acesso a dados (mock hoje — ver docs/frontend-plan.md)
+  prisma/                  # schema.prisma, migrations
 ```
 
 - **Fluxo de dados**: UI (Server/Client Components) → Server Actions/Route Handlers → camada de `modules/*` (regras de negócio) → Prisma Client → Postgres.
@@ -89,18 +94,19 @@ src/
 
 ### Ticket: T001 Setup do projeto Next.js + TypeScript
 - **Priority:** P0
-- **Status:** Todo
+- **Status:** Done
 - **Owner:** Unassigned
 - **Scope:** Inicializar projeto Next.js (App Router) com TypeScript, ESLint, estrutura de pastas descrita na Seção 5.
 - **Acceptance Criteria:** `npm run dev` sobe uma página inicial; `npm run lint` e `npm run build` passam sem erro.
 - **Validation Steps:** `npm install && npm run build && npm run dev`
+- **Notes:** Ver também T-FE-01 em `docs/frontend-plan.md` (Tailwind + shadcn/ui + tema InfoHub aplicados). Projeto vive em `app/`, com `package.json` raiz delegando os scripts (Seção 5).
 - **Notes:**
 
 ### Ticket: T002 Configurar Postgres + Prisma (client e conexão)
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Inicializar Prisma (`npx prisma init`), configurar `infra/db/schema.prisma` apontando para Postgres (local via Docker Compose ou Neon), variáveis de ambiente em `.env`.
+- **Scope:** Configurar `app/prisma/schema.prisma` (já criado) apontando para Postgres (local via Docker Compose ou Neon), variáveis de ambiente em `app/.env`.
 - **Acceptance Criteria:** Aplicação conecta ao banco na inicialização sem erro; conexão testável via script simples.
 - **Validation Steps:** Script `npm run db:check` (ou equivalente) conecta e retorna sucesso.
 - **Notes:** Registrar em `decisoes.md` a escolha entre Postgres local (Docker) vs. Neon para desenvolvimento.

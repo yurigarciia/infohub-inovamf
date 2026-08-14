@@ -1,17 +1,17 @@
-# dependencies
-/node_modules
-/.pnp
+# dependencies (matches root and app/, in case a workspace is added later)
+node_modules/
+.pnp
 .pnp.*
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store

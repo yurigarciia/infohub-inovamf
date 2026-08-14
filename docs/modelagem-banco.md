@@ -3,7 +3,7 @@
 Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerados:
 
 - [`db/schema.sql`](../db/schema.sql) — DDL completo em PostgreSQL (entrega do dia).
-- [`prisma/schema.prisma`](../prisma/schema.prisma) — ORM definido (Prisma), espelhando o `.sql`.
+- [`app/prisma/schema.prisma`](../app/prisma/schema.prisma) — ORM definido (Prisma), espelhando o `.sql`.
 - [`db/diagram.dbml`](../db/diagram.dbml) — DER pronto para importar em [dbdiagram.io](https://dbdiagram.io) (Import → DBML).
 
 ## 1. Tabelas para suprir RF-01 a RF-24

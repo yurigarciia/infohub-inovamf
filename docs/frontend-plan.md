@@ -86,7 +86,7 @@ Cobertura por papel, nesta ordem de prioridade (replica P0/P1 do `PLAN.md`):
 Objetivo: os componentes de UI nunca importam um array mockado diretamente — sempre chamam uma função de `services/`, como se fosse uma chamada de API. Isso cria uma "costura" (seam) para a integração futura.
 
 ```
-src/
+app/src/                     # dentro de app/ na raiz do repositório (ver README.md)
   app/                       # rotas (App Router) — inalterado em relação ao PLAN.md
   services/                  # camada de acesso a dados — hoje mock, amanhã fetch/Prisma
     teams.service.ts
@@ -116,7 +116,7 @@ src/
 Cada função em `services/*.service.ts`:
 - É `async` (retorna `Promise`), mesmo lendo de um array em memória — o formato de chamada já é o mesmo de uma chamada real (`fetch`/Server Action/Prisma).
 - Recebe parâmetros no mesmo formato que a versão real vai receber (ex.: `getTeams(filters: TeamFilters)`, não `getTeams()` retornando tudo e filtrando na tela).
-- Retorna tipos definidos em `types/`, que espelham os models do `prisma/schema.prisma` (nomes de campo em camelCase, mesmas entidades — `Team`, `TeamMember`, `Task`, `TaskSubmission`, etc.), adaptados para o que a tela precisa (ex.: `TeamWithCurrentStage`, um tipo "view" que já vem com o relacionamento resolvido, do jeito que uma query real com `include` devolveria).
+- Retorna tipos definidos em `types/`, que espelham os models do `app/prisma/schema.prisma` (nomes de campo em camelCase, mesmas entidades — `Team`, `TeamMember`, `Task`, `TaskSubmission`, etc.), adaptados para o que a tela precisa (ex.: `TeamWithCurrentStage`, um tipo "view" que já vem com o relacionamento resolvido, do jeito que uma query real com `include` devolveria).
 - Simula latência mínima (`await delay(150-400ms)`) para os componentes já nascerem preparados para estado de loading — evita retrabalho de UX quando o backend real (com latência de verdade) entrar.
 
 Exemplo de assinatura (ilustrativo, não é código final):
@@ -146,7 +146,7 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-02 Estrutura de types/ espelhando o schema Prisma
 - **Priority:** P0
-- **Scope:** Criar `src/types/*.ts` com as entidades principais (User, StudentProfile, Team, TeamMember, TeamMentor, JourneyStage, Task, TaskSubmission, TaskReminder) como interfaces TypeScript, batendo com `prisma/schema.prisma`.
+- **Scope:** Criar `app/src/types/*.ts` com as entidades principais (User, StudentProfile, Team, TeamMember, TeamMentor, JourneyStage, Task, TaskSubmission, TaskReminder) como interfaces TypeScript, batendo com `app/prisma/schema.prisma`.
 - **Acceptance Criteria:** Nenhum `any`; tipos compilam sem erro (`tsc --noEmit`).
 - **Validation Steps:** `tsc --noEmit`.
 
