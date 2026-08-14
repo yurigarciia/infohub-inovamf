@@ -64,7 +64,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               </nav>
             )}
           </div>
-          <RoleSwitcher />
+          <div className="flex items-center gap-3">
+            {!user && (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-brand-700 hover:text-brand-800"
+              >
+                Entrar
+              </Link>
+            )}
+            <RoleSwitcher />
+          </div>
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>

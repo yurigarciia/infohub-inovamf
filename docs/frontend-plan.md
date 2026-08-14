@@ -178,9 +178,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-06 Tela de login (mock)
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Formulário de login visual; submissão "autentica" contra os usuários mockados por e-mail e redireciona para a home do papel correspondente.
 - **Acceptance Criteria:** Login com e-mail de cada papel mockado leva à respectiva home; e-mail não encontrado mostra erro.
 - **Validation Steps:** Teste manual com e-mails válidos/inválidos dos mocks.
+- **Notes:** `/login` usa `services/users.service.authenticateByEmail(email, password)` — a senha não é verificada nesta fase (só precisa estar preenchida), só a existência da conta pelo e-mail; a assinatura já é a que o login real vai ter. Sucesso chama `useSession().setUserId()` e redireciona: `STUDENT` → `/aluno`, `ADMIN`/`MENTOR` → `/admin`. Inclui link "Esqueci minha senha" (RF-01) com nota inline explicando que o fluxo real dependeria do Resend (Q7) — sem simular o envio de fato. `AppShell` ganhou um link "Entrar" visível só quando não há sessão ativa; o seletor de papel do T-FE-05 continua disponível como "Atalho de demonstração" ao lado do login real. Validado com screenshot: e-mail inexistente mostra erro inline; login válido de aluno redireciona pra `/aluno` e atualiza a sessão exibida no header. Sem erros de console.
 
 ### Ticket: T-FE-07 Formulário público de inscrição (Etapa 1)
 - **Priority:** P0

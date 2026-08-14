@@ -35,8 +35,8 @@ export function RoleSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="role-switcher" className="sr-only">
-        Sessão de demonstração
+      <label htmlFor="role-switcher" className="text-xs text-muted-foreground">
+        Atalho de demonstração:
       </label>
       <select
         id="role-switcher"
