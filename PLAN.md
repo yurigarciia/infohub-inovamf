@@ -20,23 +20,25 @@ Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), co
 
 ## 3. Assumptions
 
-- **A1** — Q1 (login de integrante) resolvido como: apenas o aluno líder tem login na Fase 1; integrantes são cadastrados como dados (não como contas), reavaliável depois com a turma.
-- **A2** — Q2 (perfil de mentor) resolvido como: mentor é um papel (`role`) dentro da tabela de usuários administrativos, com escopo restrito às equipes atribuídas a ele — não é uma entidade separada.
-- **A3** — Q3 (Pitch Vídeo) resolvido como: aceito como **link externo** (YouTube/Drive) na Fase 1, evitando lidar com upload/streaming de vídeo grande; upload de arquivo de vídeo fica como melhoria futura.
-- **A4** — Q4 (múltiplas equipes por aluno) resolvido como: um aluno participa de **no máximo uma equipe ativa** por vez (RN-03), reforçado por constraint na aplicação.
-- **A5** — Q5 (máximo de integrantes por equipe): sem limite rígido na Fase 1; campo repetível sem teto (ajustável depois).
-- **A6** — Q6 (pós-InovAMF): fora de escopo da Fase 1; o funil termina no status "Pronto para o InovAMF".
-- **A7** — Q7 (serviço de e-mail): usar um serviço transacional de e-mail com boa oferta de free tier para ambiente acadêmico (ex.: Resend ou similar via SMTP), configurável por variável de ambiente — decisão final registrada em `decisoes.md`.
+As perguntas Q1–Q7 do documento de requisitos (Seção 9) foram respondidas pela dupla e registradas em `decisoes.md`. Estão listadas aqui como decisões confirmadas, não mais como suposições:
+
+- **A1** — Q1 (login de integrante): **integrante de equipe tem login próprio, com acesso diferente do líder** (não apenas dados cadastrais). Implica uma segunda entidade de conta vinculada à equipe, com permissões mais restritas que o líder (ex.: leitura/entrega, sem editar dados cadastrais da equipe) — impacto direto em T004 e T017.
+- **A2** — Q2 (perfil de mentor): **mentor tem perfil próprio**, distinto do administrador, com escopo restrito às equipes atribuídas a ele.
+- **A3** — Q3 (Pitch Vídeo): **link externo** (YouTube/Drive), não upload de arquivo — evita lidar com upload/streaming de vídeo grande.
+- **A4** — Q4 (múltiplas equipes por aluno): **um aluno PODE participar de mais de uma ideia/equipe ativa ao mesmo tempo.** Isso **substitui a leitura literal de RN-03** do documento de requisitos (que previa uma única equipe ativa) — a relação `User`↔`Team` deve ser modelada como N:N, não 1:N.
+- **A5** — Q5 (máximo de integrantes por equipe): **sem limite** — campo repetível sem teto.
+- **A6** — Q6 (pós-InovAMF): **não há etapa pós-InovAMF**; o funil termina no status "Pronto para o InovAMF".
+- **A7** — Q7 (serviço de e-mail): **Resend** — decisão confirmada, usado em `modules/notifications`/`infra/email`.
 - **A8** — Deploy alvo: Vercel (Next.js) + Postgres gerenciado (ex.: Neon, já integrado ao ecossistema Vercel), já que o projeto roda com as skills Vercel disponíveis no ambiente.
 - **A9** — Sem prazo de entrega fixo informado; tickets são sequenciados por dependência técnica, não por data.
-- **A10** — Armazenamento de arquivos (RNF-04) via serviço de blob storage compatível com Vercel (Vercel Blob) em vez de disco local, para funcionar em ambiente serverless.
+- **A10** — Armazenamento de arquivos (RNF-04) via serviço de blob storage compatível com Vercel (Vercel Blob) em vez de disco local, para funcionar em ambiente serverless. Pitch Vídeo (A3) fica fora disso, por ser link.
 
 ## 4. Constraints
 
 - **Stack obrigatória** (decisão da dupla, registrada em `decisoes.md`): Next.js (App Router, API Routes/Server Actions) + TypeScript + **Prisma** + PostgreSQL.
   - ORM: Prisma foi escolhido pela dupla, revisando a decisão inicial (TypeORM), devido ao baixo nível de familiaridade da turma com ORMs. Trade-off assumido: schema centralizado em um único arquivo (menos flexível para modelagem orientada a objetos), etapa extra de `prisma generate` no fluxo de build — aceito em troca de tipagem gerada automaticamente, curva de aprendizado mais suave e documentação mais didática.
 - **Arquitetura**: monolito único, um único processo de deploy. Módulos internos devem ser organizados em camadas/pastas claramente separadas (ver Seção 5) para que a refatoração futura para arquiteturas mais avançadas seja possível sem reescrever tudo.
-- **Autenticação**: dois tipos de login (aluno vs. administrador/mentor), e-mail+senha, com hashing de senha (bcrypt/argon2) — sem exigência de SSO/OAuth institucional nesta fase.
+- **Autenticação**: quatro papéis com login próprio — aluno líder, aluno integrante, mentor e administrador (A1, A2) —, e-mail+senha, com hashing de senha (bcrypt/argon2) — sem exigência de SSO/OAuth institucional nesta fase.
 - **LGPD (RNF-02)**: consentimento explícito no formulário de cadastro do aluno; dados pessoais tratados com política de retenção documentada.
 - **Contexto acadêmico**: o código deve ser legível e didático — decisões arquiteturais devem ser documentadas (`decisoes.md`, ADRs leves), pois a disciplina avalia o raciocínio, não só o resultado.
 - **Sem orçamento** para serviços pagos — priorizar free tiers (Neon, Vercel Hobby, Resend free tier etc.).
@@ -107,27 +109,27 @@ src/
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Definir models no `schema.prisma` para: `User` (admin/mentor/aluno), `Team`, `TeamMember`, `Idea`, `JourneyStage`/`TeamStageStatus`, `Task`, `TaskSubmission` (arquivo), `AuditLog`.
+- **Scope:** Definir models no `schema.prisma` para: `User` (papéis: admin, mentor, aluno líder, aluno integrante — A1, A2), `Team`, `TeamMember` (relação N:N `User`↔`Team`, permitindo um aluno em múltiplas equipes — A4), `Idea`, `JourneyStage`/`TeamStageStatus`, `Task`, `TaskSubmission` (arquivo ou link, para acomodar o Pitch Vídeo — A3), `AuditLog`.
 - **Acceptance Criteria:** Models cobrem os campos descritos na Seção 4.2 e 4.4 do documento de requisitos; migration inicial gerada.
 - **Validation Steps:** `npx prisma migrate dev --name initial_schema` roda sem erro em banco limpo; `npx prisma generate` executa sem erro.
 - **Notes:**
 
-### Ticket: T004 Autenticação (login separado aluno/admin)
+### Ticket: T004 Autenticação (login por papel: aluno líder, integrante, mentor, admin)
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Implementar login com e-mail/senha (hash bcrypt/argon2), sessão (ex.: cookies HTTP-only ou next-auth com Credentials provider), separação de rotas por papel.
-- **Acceptance Criteria:** RF-01 atendido: login funciona para aluno e para admin/mentor, com recuperação de senha básica.
-- **Validation Steps:** Teste manual de login com usuário seed; teste automatizado de autenticação com credenciais inválidas/válidas.
+- **Scope:** Implementar login com e-mail/senha (hash bcrypt/argon2), sessão (ex.: cookies HTTP-only ou next-auth com Credentials provider), separação de rotas e permissões pelos quatro papéis (A1, A2): aluno líder (acesso total à sua equipe), aluno integrante (acesso restrito — leitura/entrega), mentor (escopo restrito às equipes atribuídas), admin (acesso total).
+- **Acceptance Criteria:** RF-01 atendido: login funciona para os quatro papéis, com recuperação de senha básica; integrante não consegue editar dados cadastrais da equipe (apenas líder/admin podem).
+- **Validation Steps:** Teste manual de login com usuário seed de cada papel; teste automatizado de autenticação com credenciais inválidas/válidas e de permissão negada para integrante tentando ação restrita ao líder.
 - **Notes:**
 
 ### Ticket: T005 Formulário inicial do aluno (Etapa 1 — cadastro de ideia)
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Formulário público com todos os campos da Seção 4.2, validação client+server (zod), criação automática de conta do aluno líder e do registro da equipe na Etapa 1 (RF-02, RF-04, RF-05).
-- **Acceptance Criteria:** Envio válido cria `User` (aluno), `Team`, `TeamMember`(s) e posiciona a equipe na Etapa 1; envio inválido bloqueia com mensagens de erro.
-- **Validation Steps:** Teste de integração cobrindo submissão válida e inválida; verificação manual no banco após submit.
+- **Scope:** Formulário público com todos os campos da Seção 4.2, validação client+server (zod), criação automática de conta do aluno líder, contas dos integrantes informados (A1) e do registro da equipe na Etapa 1 (RF-02, RF-04, RF-05). Deve permitir que um aluno já cadastrado (por já integrar outra equipe) seja associado a uma nova equipe sem duplicar o `User` (A4).
+- **Acceptance Criteria:** Envio válido cria/associa `User`(s), `Team`, `TeamMember`(s) e posiciona a equipe na Etapa 1; envio inválido bloqueia com mensagens de erro.
+- **Validation Steps:** Teste de integração cobrindo submissão válida, inválida, e submissão de um aluno que já participa de outra equipe ativa.
 - **Notes:** Dispara e-mail ao admin (depende de T010, pode ser stub inicialmente).
 
 ### Ticket: T006 Máquina de estados do funil (6 etapas)
@@ -233,9 +235,9 @@ src/
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Middleware/guards garantindo que aluno só veja dados da própria equipe e mentor só veja equipes sob sua mentoria (RNF-03, A2).
-- **Acceptance Criteria:** Tentativa de acessar dados de outra equipe (via URL direta ou API) retorna erro de autorização.
-- **Validation Steps:** Teste de integração tentando acessar recurso de outra equipe autenticado como aluno/mentor sem permissão.
+- **Scope:** Middleware/guards garantindo que aluno (líder ou integrante, A1) só veja dados das equipes às quais pertence (podendo ser mais de uma, A4), integrante tem ações restritas frente ao líder, e mentor só vê equipes sob sua mentoria (RNF-03, A2).
+- **Acceptance Criteria:** Tentativa de acessar dados de equipe da qual não participa (via URL direta ou API) retorna erro de autorização; integrante autenticado não consegue executar ações restritas ao líder.
+- **Validation Steps:** Teste de integração tentando acessar recurso de outra equipe autenticado como aluno/mentor sem permissão, e tentando ação de líder autenticado como integrante.
 - **Notes:**
 
 ### Ticket: T018 Log de auditoria
@@ -269,7 +271,7 @@ src/
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Script de seed criando 1 admin, 1 mentor, 1 aluno com equipe em cada etapa (para facilitar demonstração/avaliação em sala).
+- **Scope:** Script de seed criando 1 admin, 1 mentor, 1 aluno líder + 1 integrante por equipe, com equipes em cada etapa, incluindo um aluno participando de duas equipes simultaneamente (A4) (para facilitar demonstração/avaliação em sala).
 - **Acceptance Criteria:** `npm run seed` popula o banco local de forma idempotente.
 - **Validation Steps:** Rodar `npm run seed` duas vezes seguidas sem erro nem duplicação indevida.
 - **Notes:**
@@ -278,7 +280,7 @@ src/
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Suíte de testes (ex.: Vitest/Jest) cobrindo RN-01 a RN-04 e a máquina de estados do funil.
+- **Scope:** Suíte de testes (ex.: Vitest/Jest) cobrindo RN-01, RN-02, RN-04 (RN-03 foi substituída pela decisão A4 — múltiplas equipes por aluno permitidas, não testar como restrição) e a máquina de estados do funil.
 - **Acceptance Criteria:** `npm test` roda e passa cobrindo os cenários de regra de negócio descritos na Seção 6 do documento de requisitos.
 - **Validation Steps:** `npm test` com relatório de cobertura mínima nos módulos `journey` e `tasks`.
 - **Notes:**
@@ -303,10 +305,10 @@ src/
 
 ## 8. Open Questions
 
-- **OQ1** — A escolha final do provedor de e-mail transacional (A7) depende do que a coordenação/turma padronizar; hoje assumido como decisão por dupla, a alinhar depois.
+- **OQ1** — Resend (A7) foi decidido pela dupla; falta confirmar se a instituição fornece um domínio verificado para envio ou se o projeto seguirá com o domínio de sandbox/free tier do Resend durante a disciplina.
 - **OQ2** — Se e quando a turma padronizar Postgres gerenciado (Neon vs. outro), isso pode mudar T002/T024.
 - **OQ3** — O professor pode definir um formato específico para o registro de decisões além de `decisoes.md` (ex.: ADRs numerados) — a confirmar com a disciplina.
-- **OQ4** — As perguntas Q1–Q7 do documento de requisitos original foram resolvidas como assunções (Seção 3) apenas para viabilizar a Fase 1; a coordenação do InfoHub pode decidir diferente, exigindo ajuste de escopo depois.
+- **OQ4** — Q1–Q7 do documento de requisitos original já foram respondidas pela dupla (ver Seção 3 — Assumptions, e `decisoes.md`); resta apenas alinhar com a coordenação do InfoHub se essas escolhas (ex.: aluno em múltiplas equipes, integrante com login próprio) também servirão de padrão para a versão real usada pela coordenação, fora do contexto acadêmico.
 - **OQ5** — Critérios de avaliação da disciplina para a Fase 1 (o que exatamente será cobrado como "monolito completo") ainda não foram detalhados neste plano — ajustar Definition of Done conforme o professor especificar.
 
 ## 9. Discovered Issues Log

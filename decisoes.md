@@ -27,4 +27,28 @@ Prisma. (Decisão revisada: a escolha inicial havia sido TypeORM, substituída p
 
 ---
 
+
+Mais perguntas em aberto:
+Seção 8 do documento de requisitos: o que precisa ser decidido antes de desenhar o banco:
+Q1 - Cada integrante de equipe terá login próprio, ou só o aluno líder acessa o sistema?
+R: Líder e integrante com acessos diferentes
+
+Q2 - Mentores terão perfil próprio (restrito às suas equipes) ou usarão o login de administrador?
+R: Perfil próprio
+
+Q3 - O Pitch Vídeo será upload de arquivo ou link (Youtube/Drive)? Muda o armazenamento.
+R: Link 
+
+Q4 - Um aluno pode participar de mais de uma ideia/equipe ao mesmo tempo?
+R: Pode participar de mais.
+
+Q5 - Existe um numero máximo de integrantes por equipe?
+R: Não.
+
+Q6 - Haverá etapas pós-InovAMF, ou o escopo termina na entrega dos materiais?
+R: Não.
+
+Q7 - Qual serviço de e-mail a instituição usa ou prefee (Google Workspace, Outlook, transacional)?
+R: RESEND
+
 _Demais decisões de arquitetura da disciplina serão registradas neste arquivo à medida que forem tomadas (ver `PLAN.md`, Seção 8 — Open Questions, para pontos ainda pendentes de padronização com a turma)._
