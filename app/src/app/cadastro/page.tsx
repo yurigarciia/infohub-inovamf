@@ -25,17 +25,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CURRENT_COHORT } from "@/lib/constants";
+import { IDEA_MATURITY_LABELS } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { createTeamFromInscription, getIdeaAreas } from "@/services";
 import { IdeaMaturity } from "@/types";
 import type { IdeaArea } from "@/types";
-
-const IDEA_MATURITY_LABELS: Record<IdeaMaturity, string> = {
-  [IdeaMaturity.IDEA]: "Apenas ideia",
-  [IdeaMaturity.PROTOTYPE]: "Protótipo",
-  [IdeaMaturity.MVP_IN_PROGRESS]: "MVP em desenvolvimento",
-  [IdeaMaturity.MVP_READY]: "MVP pronto",
-};
 
 const memberSchema = z.object({
   name: z.string().trim().min(3, "Informe o nome completo"),

@@ -204,9 +204,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-09 Página de detalhe da equipe
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Dados cadastrais, histórico de etapas, lista de tarefas, arquivos entregues, anotações internas (ocultas para o aluno).
 - **Acceptance Criteria:** Anotações internas não renderizam quando o papel ativo é aluno.
 - **Validation Steps:** Alternar papel ativo na mesma equipe e conferir visibilidade.
+- **Notes:** `/admin/equipes/[teamId]` (rota dinâmica, Server Component fino que resolve `params` e delega pro Client Component `components/teams/team-detail-view.tsx`). Cards de dados cadastrais, equipe (integrantes + mentores), histórico de etapas (nome resolvido via `getJourneyStages()`) e tarefas com entregas (link do arquivo/link externo + status de revisão, mostrando as duas versões quando há reprovação+reenvio). Seção de anotações internas + formulário de adicionar (`addTeamNote`) só renderiza se `isStaff` (`ADMIN`/`MENTOR`). Botões "Avançar etapa"/"Retroceder etapa" (RF-09, via `advanceTeamStage`) também só para staff, desabilitados nas bordas (etapa 1/6). **Guarda de acesso**: se o usuário ativo é `STUDENT` e não é membro da equipe, a página mostra "Você não tem acesso a esta equipe." em vez dos dados — checagem básica de RNF-03 nesta camada (reforço mais completo fica para o T-FE-17). Reaproveitado o mesmo padrão de `Promise.resolve().then()` para os `setState` em efeito (mesma regra de lint do T-FE-08). Também criado `lib/labels.ts` centralizando os mapas de rótulo PT-BR que estavam duplicados entre `admin/page.tsx`, `cadastro/page.tsx` e `role-switcher.tsx`. Validado com smoke test: admin vê anotações e botões; o próprio líder da equipe (aluno) não vê nem um nem outro; aluno de outra equipe é bloqueado; avançar etapa move a equipe e atualiza o histórico. Sem erros de console.
 
 ### Ticket: T-FE-10 Área do aluno — lista de tarefas + envio
 - **Priority:** P0

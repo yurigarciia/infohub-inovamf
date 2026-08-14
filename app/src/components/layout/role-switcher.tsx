@@ -1,20 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TEAM_MEMBER_ROLE_LABELS, USER_ROLE_LABELS } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { getStudentMemberRoleSummary } from "@/services";
 import { TeamMemberRole, UserRole } from "@/types";
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.ADMIN]: "Administrador",
-  [UserRole.MENTOR]: "Mentor",
-  [UserRole.STUDENT]: "Aluno",
-};
-
-const STUDENT_SUB_LABELS: Record<TeamMemberRole, string> = {
-  [TeamMemberRole.LEADER]: "líder",
-  [TeamMemberRole.MEMBER]: "integrante",
-};
 
 /**
  * Seletor de "papel ativo" (T-FE-05) — substitui o login real enquanto
@@ -50,10 +40,12 @@ export function RoleSwitcher() {
         {users.map((u) => {
           const memberRole = studentRoles.get(u.id);
           const subLabel =
-            u.role === UserRole.STUDENT && memberRole ? STUDENT_SUB_LABELS[memberRole] : null;
+            u.role === UserRole.STUDENT && memberRole
+              ? TEAM_MEMBER_ROLE_LABELS[memberRole]
+              : null;
           return (
             <option key={u.id} value={u.id}>
-              {u.name} — {ROLE_LABELS[u.role]}
+              {u.name} — {USER_ROLE_LABELS[u.role]}
               {subLabel ? ` (${subLabel})` : ""}
             </option>
           );

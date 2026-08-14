@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,17 +17,9 @@ import {
   getMentors,
   getTeamsByStage,
 } from "@/services";
+import { TASK_STATUS_LABELS } from "@/lib/labels";
 import { TaskStatus, TeamMemberRole } from "@/types";
 import type { IdeaArea, JourneyStage, TeamBoardItem, TeamFilters, User } from "@/types";
-
-const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  [TaskStatus.PENDING]: "Pendente",
-  [TaskStatus.IN_PROGRESS]: "Em andamento",
-  [TaskStatus.SUBMITTED]: "Entregue",
-  [TaskStatus.LATE]: "Atrasada",
-  [TaskStatus.APPROVED]: "Aprovada",
-  [TaskStatus.REJECTED]: "Reprovada",
-};
 
 const ALL_VALUE = "__all__";
 
@@ -209,7 +202,10 @@ function FilterSelect({
 
 function TeamCard({ team }: { team: TeamBoardItem }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
+    <Link
+      href={`/admin/equipes/${team.id}`}
+      className="block rounded-lg border border-border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+    >
       <div className="mb-1 flex items-start justify-between gap-2">
         <span className="text-sm font-semibold leading-tight">{team.ideaName}</span>
         {team.isReadyForInovamf && (
@@ -231,6 +227,6 @@ function TeamCard({ team }: { team: TeamBoardItem }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Link>
   );
 }
