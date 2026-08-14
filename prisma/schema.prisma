@@ -70,6 +70,8 @@ model User {
   email             String    @unique
   passwordHash      String    @map("password_hash")
   phone             String?
+  course            String?   // curso do aluno (RF-04); NULL para admin/mentor
+  period            String?   // semestre/período do aluno (RF-04); NULL para admin/mentor
   role              UserRole
   isActive          Boolean   @default(true) @map("is_active")
   lgpdConsentedAt   DateTime? @map("lgpd_consented_at")
@@ -146,8 +148,6 @@ model TeamMember {
   teamId     String         @map("team_id")
   userId     String         @map("user_id")
   memberRole TeamMemberRole @map("member_role")
-  course     String?
-  period     String?
   joinedAt   DateTime       @default(now()) @map("joined_at")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)

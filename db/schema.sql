@@ -9,7 +9,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
 -- ---------------------------------------------------------------------
 -- 1. USERS — administradores, mentores e alunos (líder ou integrante).
 --    A distinção líder/integrante é POR EQUIPE (ver team_members),
---    não um atributo global do usuário (Q1).
+--    não um atributo global do usuário (Q1). course/period ficam AQUI
+--    (e não em team_members) por serem atributos da pessoa, não da
+--    participação numa equipe específica — evita duplicação e
+--    inconsistência quando o aluno integra mais de uma equipe (Q4).
 -- ---------------------------------------------------------------------
 CREATE TABLE users (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -17,6 +20,8 @@ CREATE TABLE users (
     email               VARCHAR(255) NOT NULL UNIQUE,
     password_hash       VARCHAR(255) NOT NULL,
     phone               VARCHAR(20),
+    course              VARCHAR(150),              -- curso do aluno (RF-04); NULL para admin/mentor
+    period              VARCHAR(20),                -- semestre/periodo do aluno (RF-04); NULL para admin/mentor
     role                VARCHAR(20) NOT NULL
                           CHECK (role IN ('ADMIN', 'MENTOR', 'STUDENT')),
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
@@ -75,8 +80,6 @@ CREATE TABLE team_members (
     team_id      UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     user_id      UUID NOT NULL REFERENCES users(id),
     member_role  VARCHAR(10) NOT NULL CHECK (member_role IN ('LEADER', 'MEMBER')),
-    course       VARCHAR(150),
-    period       VARCHAR(20),
     joined_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (team_id, user_id)
 );

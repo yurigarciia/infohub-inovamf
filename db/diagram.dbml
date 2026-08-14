@@ -7,6 +7,8 @@ Table users {
   email              varchar   [unique, not null]
   password_hash      varchar
   phone              varchar
+  course             varchar   [note: "curso do aluno; null para admin/mentor"]
+  period             varchar   [note: "semestre/periodo do aluno; null para admin/mentor"]
   role               varchar   [note: "ADMIN | MENTOR | STUDENT"]
   is_active          boolean
   lgpd_consented_at  timestamp
@@ -45,8 +47,6 @@ Table team_members {
   team_id      uuid      [ref: > teams.id]
   user_id      uuid      [ref: > users.id]
   member_role  varchar   [note: "LEADER | MEMBER"]
-  course       varchar
-  period       varchar
   joined_at    timestamp
 
   indexes {

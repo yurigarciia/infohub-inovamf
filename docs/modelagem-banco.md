@@ -14,7 +14,7 @@ Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerado
 | `idea_areas` | RF-04 (lista de área/setor configurável) |
 | `journey_stages` | as 6 etapas fixas do funil (Seção 3 do documento de requisitos) |
 | `teams` | RF-04, RF-05 (cadastro da ideia/equipe), RF-06, RF-24 (`cohort`) |
-| `team_members` | RF-04 (integrantes), Q1 (líder x integrante) |
+| `team_members` | RF-04 (vínculo aluno↔equipe), Q1 (líder x integrante) |
 | `team_mentors` | Q2 (mentor restrito às suas equipes), RNF-03 |
 | `team_stage_history` | RF-08, RF-09 (histórico e avanço/retrocesso de etapa) |
 | `team_notes` | RF-10 (anotações internas do mentor) |
@@ -26,6 +26,8 @@ Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerado
 | `audit_logs` | RNF-05 (auditoria) |
 
 RF-22 (dashboard) e RF-23 (export CSV) são resolvidos por consulta sobre as tabelas acima — não exigem tabela própria.
+
+**Ajuste de normalização:** `course`/`period` (curso e semestre/período do aluno) ficam em `users`, não em `team_members`. São atributos da pessoa, não da participação numa equipe específica — mantê-los em `team_members` duplicaria o dado a cada equipe que o aluno integrasse (Q4) e exigiria editar em N lugares a cada mudança de curso/período, violando a Terceira Forma Normal (dependência de um atributo não-chave em relação a outro atributo não-chave, e não à chave primária da tabela de associação).
 
 ## 2. Atributos e chave primária
 
