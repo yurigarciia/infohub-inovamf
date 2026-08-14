@@ -74,3 +74,13 @@ As regras do jogo:
 2 - ENTREGA DE HOJE: arquivo .sql com o banco de dados completo  + o ORM definido
 
 **Entregue:** [`db/schema.sql`](db/schema.sql) (DDL completo) + [`prisma/schema.prisma`](prisma/schema.prisma) (ORM: Prisma).
+
+------
+
+Frontend com dados mockados
+
+Próximo entregável: interface completa (sem fluxos cadastrais/listagem com dados reais), consumindo dados mockados por uma camada de services já no formato esperado do backend futuro.
+
+**Decisão — stack de UI:** Tailwind CSS + shadcn/ui. Motivo: componentes acessíveis prontos (dialog, tabs, table, form) aceleram montar todas as telas do funil sem abrir mão de qualidade visual; customizados com a paleta de cores do InfoHub (vermelho-bordô → laranja, extraída de `assets/logotipo.png`). Trade-off: componentes shadcn são copiados para dentro do repo (não é uma dependência fechada), então ficam livres para editar, mas aumentam a quantidade de arquivos em `src/components/ui`.
+
+**Entregue:** [`docs/frontend-plan.md`](docs/frontend-plan.md) — design system (paleta de cores, tipografia), escopo de telas mapeado às RF-01 a RF-24, arquitetura da camada de mocks/services (pensada para integração futura com o backend real) e backlog de 17 tickets (T-FE-01 a T-FE-17).
