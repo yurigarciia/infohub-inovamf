@@ -1,0 +1,314 @@
+// InfoHub -> InovAMF — Schema Prisma
+// Espelha db/schema.sql. Ver decisoes.md para o porquê do Prisma e
+// docs/modelagem-banco.md para o raciocínio da modelagem.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MENTOR
+  STUDENT
+}
+
+enum TeamMemberRole {
+  LEADER
+  MEMBER
+}
+
+enum IdeaMaturity {
+  IDEA
+  PROTOTYPE
+  MVP_IN_PROGRESS
+  MVP_READY
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  LATE
+  APPROVED
+  REJECTED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EmailNotificationType {
+  TASK_ASSIGNED
+  DEADLINE_REMINDER
+  DEADLINE_LATE
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  NEW_TEAM_REGISTERED
+  FILE_SUBMITTED
+  TASK_LATE
+  MANUAL_REMINDER
+}
+
+enum EmailNotificationStatus {
+  SENT
+  FAILED
+  RETRIED
+}
+
+/// Administradores, mentores e alunos. Líder x integrante é definido
+/// por equipe em TeamMember.role, não aqui (Q1).
+model User {
+  id                String    @id @default(uuid())
+  name              String
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  phone             String?
+  role              UserRole
+  isActive          Boolean   @default(true) @map("is_active")
+  lgpdConsentedAt   DateTime? @map("lgpd_consented_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  teamMemberships   TeamMember[]
+  mentoredTeams     TeamMentor[]
+  authoredNotes     TeamNote[]
+  createdTasks      Task[]             @relation("TaskCreatedBy")
+  submissions       TaskSubmission[]   @relation("SubmittedBy")
+  reviewedSubmissions TaskSubmission[] @relation("ReviewedBy")
+  stageChanges      TeamStageHistory[]
+  emailNotifications EmailNotification[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+/// Área/setor da ideia, lista configurável pelo administrador.
+model IdeaArea {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  teams     Team[]
+
+  @@map("idea_areas")
+}
+
+/// As 6 etapas fixas do funil InfoHub -> InovAMF.
+model JourneyStage {
+  id     Int    @id @default(autoincrement())
+  number Int    @unique
+  name   String
+
+  teams          Team[]
+  stageHistory   TeamStageHistory[]
+  taskTemplates  TaskTemplate[]
+  tasks          Task[]
+
+  @@map("journey_stages")
+}
+
+/// Equipe/ideia em avaliação no InfoHub.
+model Team {
+  id                 String       @id @default(uuid())
+  ideaName           String       @map("idea_name")
+  ideaDescription    String       @map("idea_description")
+  areaId             Int?         @map("area_id")
+  ideaMaturity       IdeaMaturity @map("idea_maturity")
+  sourceOrigin       String?      @map("source_origin")
+  cohort             String
+  currentStageId     Int          @map("current_stage_id")
+  isReadyForInovamf  Boolean      @default(false) @map("is_ready_for_inovamf")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  area          IdeaArea?          @relation(fields: [areaId], references: [id])
+  currentStage  JourneyStage       @relation(fields: [currentStageId], references: [id])
+  members       TeamMember[]
+  mentors       TeamMentor[]
+  notes         TeamNote[]
+  stageHistory  TeamStageHistory[]
+  tasks         Task[]
+  emailNotifications EmailNotification[]
+
+  @@map("teams")
+}
+
+/// N:N entre User e Team. Um aluno pode integrar mais de uma equipe (Q4).
+model TeamMember {
+  id         String         @id @default(uuid())
+  teamId     String         @map("team_id")
+  userId     String         @map("user_id")
+  memberRole TeamMemberRole @map("member_role")
+  course     String?
+  period     String?
+  joinedAt   DateTime       @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+/// N:N entre mentores (User.role = MENTOR) e Team (Q2, RNF-03).
+model TeamMentor {
+  id         String   @id @default(uuid())
+  teamId     String   @map("team_id")
+  mentorId   String   @map("mentor_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  mentor User @relation(fields: [mentorId], references: [id])
+
+  @@unique([teamId, mentorId])
+  @@map("team_mentors")
+}
+
+/// Histórico de transições entre etapas (RF-08, RF-09).
+model TeamStageHistory {
+  id         String    @id @default(uuid())
+  teamId     String    @map("team_id")
+  stageId    Int       @map("stage_id")
+  enteredAt  DateTime  @default(now()) @map("entered_at")
+  exitedAt   DateTime? @map("exited_at")
+  changedById String?  @map("changed_by")
+
+  team      Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  stage     JourneyStage  @relation(fields: [stageId], references: [id])
+  changedBy User?         @relation(fields: [changedById], references: [id])
+
+  @@map("team_stage_history")
+}
+
+/// Anotações internas do mentor/admin (RF-10), não visíveis ao aluno.
+model TeamNote {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("team_notes")
+}
+
+/// Modelos de tarefa pré-configurados por etapa (RF-11).
+model TaskTemplate {
+  id          String   @id @default(uuid())
+  stageId     Int      @map("stage_id")
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  stage JourneyStage @relation(fields: [stageId], references: [id])
+  tasks Task[]
+
+  @@map("task_templates")
+}
+
+/// Tarefa atribuída a uma equipe (RF-11 a RF-13, RN-04).
+model Task {
+  id          String     @id @default(uuid())
+  teamId      String     @map("team_id")
+  stageId     Int        @map("stage_id")
+  templateId  String?    @map("template_id")
+  title       String
+  description String?
+  dueDate     DateTime   @map("due_date") @db.Date
+  status      TaskStatus @default(PENDING)
+  createdById String     @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  team        Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  stage       JourneyStage   @relation(fields: [stageId], references: [id])
+  template    TaskTemplate?  @relation(fields: [templateId], references: [id])
+  createdBy   User           @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  submissions TaskSubmission[]
+  reminders   TaskReminder[]
+  emailNotifications EmailNotification[]
+
+  @@map("tasks")
+}
+
+/// Entregas de uma tarefa, com histórico de versões (RF-14 a RF-16).
+/// isExternalLink cobre o Pitch Vídeo, que é sempre link (Q3).
+model TaskSubmission {
+  id               String       @id @default(uuid())
+  taskId           String       @map("task_id")
+  submittedById    String       @map("submitted_by")
+  fileUrl          String       @map("file_url")
+  isExternalLink   Boolean      @default(false) @map("is_external_link")
+  version          Int          @default(1)
+  isCurrent        Boolean      @default(true) @map("is_current")
+  submittedAt      DateTime     @default(now()) @map("submitted_at")
+  reviewStatus     ReviewStatus @default(PENDING) @map("review_status")
+  reviewComment    String?      @map("review_comment")
+  reviewedById     String?      @map("reviewed_by")
+  reviewedAt       DateTime?    @map("reviewed_at")
+
+  task        Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedBy User  @relation("SubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy  User? @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@map("task_submissions")
+}
+
+/// Datas de lembrete configuradas por tarefa (RF-17, RF-18, RF-20).
+model TaskReminder {
+  id        String    @id @default(uuid())
+  taskId    String    @map("task_id")
+  remindAt  DateTime  @map("remind_at")
+  isManual  Boolean   @default(false) @map("is_manual")
+  sent      Boolean   @default(false)
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_reminders")
+}
+
+/// Log de e-mails disparados via Resend (Q7) — RF-18, RF-19, RNF-05/06.
+model EmailNotification {
+  id                 String                   @id @default(uuid())
+  recipientUserId    String                   @map("recipient_user_id")
+  type               EmailNotificationType
+  subject            String
+  relatedTeamId      String?                  @map("related_team_id")
+  relatedTaskId      String?                  @map("related_task_id")
+  status             EmailNotificationStatus  @default(SENT)
+  providerMessageId  String?                  @map("provider_message_id")
+  sentAt             DateTime?                @map("sent_at")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+
+  recipient User  @relation(fields: [recipientUserId], references: [id])
+  team      Team? @relation(fields: [relatedTeamId], references: [id])
+  task      Task? @relation(fields: [relatedTaskId], references: [id])
+
+  @@map("email_notifications")
+}
+
+/// Trilha de auditoria (RNF-05).
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String?  @map("actor_user_id")
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id")
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@map("audit_logs")
+}

@@ -1,0 +1,153 @@
+// InfoHub -> InovAMF — DER
+// Importar em https://dbdiagram.io (Import > DBML)
+
+Table users {
+  id                 uuid      [pk, default: `gen_random_uuid()`]
+  name               varchar
+  email              varchar   [unique, not null]
+  password_hash      varchar
+  phone              varchar
+  role               varchar   [note: "ADMIN | MENTOR | STUDENT"]
+  is_active          boolean
+  lgpd_consented_at  timestamp
+  created_at         timestamp
+  updated_at         timestamp
+}
+
+Table idea_areas {
+  id          int       [pk, increment]
+  name        varchar   [unique]
+  created_at  timestamp
+}
+
+Table journey_stages {
+  id      int  [pk, increment]
+  number  int  [unique, note: "1 a 6"]
+  name    varchar
+}
+
+Table teams {
+  id                     uuid      [pk, default: `gen_random_uuid()`]
+  idea_name              varchar
+  idea_description       text
+  area_id                int       [ref: > idea_areas.id]
+  idea_maturity          varchar   [note: "IDEA | PROTOTYPE | MVP_IN_PROGRESS | MVP_READY"]
+  source_origin          varchar
+  cohort                 varchar   [note: "turma/semestre, ex: 2026.2"]
+  current_stage_id       int       [ref: > journey_stages.id]
+  is_ready_for_inovamf   boolean
+  created_at             timestamp
+  updated_at             timestamp
+}
+
+Table team_members {
+  id           uuid      [pk, default: `gen_random_uuid()`]
+  team_id      uuid      [ref: > teams.id]
+  user_id      uuid      [ref: > users.id]
+  member_role  varchar   [note: "LEADER | MEMBER"]
+  course       varchar
+  period       varchar
+  joined_at    timestamp
+
+  indexes {
+    (team_id, user_id) [unique]
+  }
+}
+
+Table team_mentors {
+  id           uuid      [pk, default: `gen_random_uuid()`]
+  team_id      uuid      [ref: > teams.id]
+  mentor_id    uuid      [ref: > users.id]
+  assigned_at  timestamp
+
+  indexes {
+    (team_id, mentor_id) [unique]
+  }
+}
+
+Table team_stage_history {
+  id          uuid      [pk, default: `gen_random_uuid()`]
+  team_id     uuid      [ref: > teams.id]
+  stage_id    int       [ref: > journey_stages.id]
+  entered_at  timestamp
+  exited_at   timestamp
+  changed_by  uuid      [ref: > users.id]
+}
+
+Table team_notes {
+  id          uuid      [pk, default: `gen_random_uuid()`]
+  team_id     uuid      [ref: > teams.id]
+  author_id   uuid      [ref: > users.id]
+  content     text
+  created_at  timestamp
+}
+
+Table task_templates {
+  id           uuid      [pk, default: `gen_random_uuid()`]
+  stage_id     int       [ref: > journey_stages.id]
+  title        varchar
+  description  text
+  created_at   timestamp
+}
+
+Table tasks {
+  id           uuid      [pk, default: `gen_random_uuid()`]
+  team_id      uuid      [ref: > teams.id]
+  stage_id     int       [ref: > journey_stages.id]
+  template_id  uuid      [ref: > task_templates.id]
+  title        varchar
+  description  text
+  due_date     date
+  status       varchar   [note: "PENDING | IN_PROGRESS | SUBMITTED | LATE | APPROVED | REJECTED"]
+  created_by   uuid      [ref: > users.id]
+  created_at   timestamp
+  updated_at   timestamp
+}
+
+Table task_submissions {
+  id                uuid      [pk, default: `gen_random_uuid()`]
+  task_id           uuid      [ref: > tasks.id]
+  submitted_by      uuid      [ref: > users.id]
+  file_url          text      [note: "URL no blob storage OU link externo (Pitch Video)"]
+  is_external_link  boolean
+  version           int
+  is_current        boolean
+  submitted_at      timestamp
+  review_status     varchar   [note: "PENDING | APPROVED | REJECTED"]
+  review_comment    text
+  reviewed_by       uuid      [ref: > users.id]
+  reviewed_at       timestamp
+}
+
+Table task_reminders {
+  id         uuid      [pk, default: `gen_random_uuid()`]
+  task_id    uuid      [ref: > tasks.id]
+  remind_at  timestamp
+  is_manual  boolean
+  sent       boolean
+  sent_at    timestamp
+  created_at timestamp
+}
+
+Table email_notifications {
+  id                    uuid      [pk, default: `gen_random_uuid()`]
+  recipient_user_id     uuid      [ref: > users.id]
+  type                  varchar   [note: "TASK_ASSIGNED | DEADLINE_REMINDER | ... (ver schema.sql)"]
+  subject               varchar
+  related_team_id       uuid      [ref: > teams.id]
+  related_task_id       uuid      [ref: > tasks.id]
+  status                varchar   [note: "SENT | FAILED | RETRIED"]
+  provider_message_id   varchar   [note: "id retornado pelo Resend"]
+  sent_at               timestamp
+  created_at            timestamp
+}
+
+Table audit_logs {
+  id             uuid      [pk, default: `gen_random_uuid()`]
+  actor_user_id  uuid      [ref: > users.id]
+  entity_type    varchar
+  entity_id      uuid
+  action         varchar
+  metadata       json
+  created_at     timestamp
+}

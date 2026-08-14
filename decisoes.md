@@ -52,3 +52,25 @@ Q7 - Qual serviço de e-mail a instituição usa ou prefee (Google Workspace, Ou
 R: RESEND
 
 _Demais decisões de arquitetura da disciplina serão registradas neste arquivo à medida que forem tomadas (ver `PLAN.md`, Seção 8 — Open Questions, para pontos ainda pendentes de padronização com a turma)._
+
+------
+
+Modelagem ao Vivo
+
+1 - Definir tabelas para suprir RF-01 a RF-24
+2 - Deinifir os atributos e a chave primária de cada tabela.
+3 - Ligar os relacionamentos (1:N, N:N)
+4 - Aplicar as decisões em aberto (Q1 - Q7) no modelo.
+5 - Montar o DER no dbdiagram.io, projetado no telão
+
+* Leve em consideração todas as decisões tomadas até o momento
+
+**Resultado:** modelagem concluída — ver [`docs/modelagem-banco.md`](docs/modelagem-banco.md) (raciocínio dos 5 passos), [`db/schema.sql`](db/schema.sql) (DDL completo) e [`db/diagram.dbml`](db/diagram.dbml) (importar em dbdiagram.io).
+
+Requisitos Iniciais do Projeto
+
+As regras do jogo:
+1 - Front + Back em um único projeto: toda a aplicação deve subir com um único comando (sem backend e frontend separado)
+2 - ENTREGA DE HOJE: arquivo .sql com o banco de dados completo  + o ORM definido
+
+**Entregue:** [`db/schema.sql`](db/schema.sql) (DDL completo) + [`prisma/schema.prisma`](prisma/schema.prisma) (ORM: Prisma).
