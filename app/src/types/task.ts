@@ -68,3 +68,9 @@ export interface TaskWithDetails extends Task {
   submissions: TaskSubmissionWithUsers[];
   reminders: TaskReminder[];
 }
+
+/** Tarefa com o nome da equipe já resolvido — usada na área do aluno
+ * (RF-13), já que um aluno pode ter tarefas de mais de uma equipe (Q4). */
+export interface TaskWithTeam extends TaskWithDetails {
+  team: { id: string; ideaName: string };
+}

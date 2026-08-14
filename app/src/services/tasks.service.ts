@@ -6,6 +6,7 @@ import {
   MOCK_TASK_SUBMISSIONS,
   MOCK_TASKS,
   MOCK_TEAM_MEMBERS,
+  MOCK_TEAMS,
   MOCK_USERS,
 } from "@/mocks/data";
 import { generateId } from "@/mocks/utils";
@@ -15,6 +16,7 @@ import type {
   TaskSubmission,
   TaskSubmissionWithUsers,
   TaskWithDetails,
+  TaskWithTeam,
 } from "@/types";
 import { delay } from "./latency";
 import { recordNotification } from "./notifications.service";
@@ -43,12 +45,16 @@ export async function getTasksForTeam(teamId: string): Promise<TaskWithDetails[]
 
 /** Área do aluno — tarefas de todas as equipes que ele integra (RF-13),
  * já que um aluno pode participar de mais de uma equipe (Q4). */
-export async function getTasksForStudent(userId: string): Promise<TaskWithDetails[]> {
+export async function getTasksForStudent(userId: string): Promise<TaskWithTeam[]> {
   await delay();
   const teamIds = new Set(
     MOCK_TEAM_MEMBERS.filter((m) => m.userId === userId).map((m) => m.teamId),
   );
-  return MOCK_TASKS.filter((t) => teamIds.has(t.teamId)).map(toTaskWithDetails);
+  return MOCK_TASKS.filter((t) => teamIds.has(t.teamId)).map((task) => {
+    const team = MOCK_TEAMS.find((t) => t.id === task.teamId);
+    if (!team) throw new Error(`Equipe ${task.teamId} não encontrada.`);
+    return { ...toTaskWithDetails(task), team: { id: team.id, ideaName: team.ideaName } };
+  });
 }
 
 export async function getTaskDetail(taskId: string): Promise<TaskWithDetails> {

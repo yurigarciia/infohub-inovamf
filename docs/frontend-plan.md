@@ -212,9 +212,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-10 Área do aluno — lista de tarefas + envio
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Lista de tarefas do aluno logado (mock), tela/modal de envio suportando upload de arquivo (mock de input file, sem upload real) e link externo (Pitch Vídeo).
 - **Acceptance Criteria:** Envio muda o status da tarefa para "SUBMITTED" no mock em memória, refletido na visão do admin.
 - **Validation Steps:** Enviar como aluno, conferir mudança de status na visão do admin.
+- **Notes:** `/admin` substitui o placeholder do T-FE-05. `getTasksForStudent` (T-FE-04) ganhou um novo tipo de retorno `TaskWithTeam` (nome da equipe resolvido — necessário porque um aluno pode ter tarefas de mais de uma equipe, Q4). Tarefas divididas em "Pendentes" (PENDING/IN_PROGRESS/LATE/REJECTED — precisam de ação) e "Concluídas" (SUBMITTED/APPROVED). Formulário de envio inline por tarefa com toggle arquivo/link: upload valida tipo (PDF/PNG/JPEG/MP4) e tamanho (até 50 MB, RNF-04) client-side antes de enviar, usando `URL.createObjectURL` como `fileUrl` mock (não há upload real nesta fase); link valida como URL bem formada. Guarda de papel: usuário não-aluno vê "Esta área é exclusiva para alunos." Validado com smoke test: envio por link move a tarefa para "Concluídas"; upload de `.txt` é rejeitado por tipo; upload de 51 MB é rejeitado por tamanho; upload de PDF válido de ~34 bytes é aceito e a tarefa migra de pendente para concluída. Sem erros de console.
 
 ### Ticket: T-FE-11 Aprovação/reprovação + histórico de versões
 - **Priority:** P0
