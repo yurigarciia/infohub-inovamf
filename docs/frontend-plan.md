@@ -146,9 +146,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-02 Estrutura de types/ espelhando o schema Prisma
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Criar `app/src/types/*.ts` com as entidades principais (User, StudentProfile, Team, TeamMember, TeamMentor, JourneyStage, Task, TaskSubmission, TaskReminder) como interfaces TypeScript, batendo com `app/prisma/schema.prisma`.
 - **Acceptance Criteria:** Nenhum `any`; tipos compilam sem erro (`tsc --noEmit`).
 - **Validation Steps:** `tsc --noEmit`.
+- **Notes:** Um arquivo por model/domínio (`enums.ts`, `user.ts`, `team.ts`, `task.ts`, `notification.ts`, `audit.ts`) + `filters.ts` para os parâmetros de consulta dos services + `index.ts` barril. Enums do Prisma viraram `as const` objects (não `enum` do TS) — mesmo padrão que o Prisma Client gera, facilita a troca futura. Também incluídos tipos "view" (`TeamBoardItem`, `TeamDetail`, `TaskWithDetails`, etc.) com relações já resolvidas, do jeito que uma query real com `include` devolveria — são o que os services (T-FE-04) vão retornar.
 
 ### Ticket: T-FE-03 Mocks base (usuários, equipes, tarefas)
 - **Priority:** P0
