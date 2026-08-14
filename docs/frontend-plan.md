@@ -154,9 +154,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-03 Mocks base (usuários, equipes, tarefas)
 - **Priority:** P0
-- **Scope:** `src/mocks/data/*.mock.ts` com um conjunto realista: 1 admin, 2 mentores, ~6 equipes distribuídas pelas 6 etapas, alunos (líderes e integrantes, alguns em múltiplas equipes — refletindo a decisão Q4), tarefas em diferentes status, incluindo pelo menos uma tarefa atrasada e uma com Pitch Vídeo como link.
+- **Status:** Done
+- **Scope:** `app/src/mocks/data/*.mock.ts` com um conjunto realista: 1 admin, 2 mentores, 6 equipes distribuídas pelas 6 etapas, alunos (líderes e integrantes, um deles em 2 equipes — Q4), tarefas em diferentes status, incluindo uma tarefa atrasada e uma com Pitch Vídeo como link externo (Q3).
 - **Acceptance Criteria:** Dados cobrem todos os `status`/`role`/`stage` possíveis pelo menos uma vez (para toda tela ter algo pra mostrar em cada estado visual).
 - **Validation Steps:** Checklist manual comparando enums usados em cada estado da UI.
+- **Notes:** Verificado com um script ad-hoc (não commitado) checando integridade referencial (toda FK aponta pra um registro existente) e cobertura: `UserRole` 3/3, `TeamMemberRole` 2/2, `IdeaMaturity` 4/4, `TaskStatus` 6/6, `ReviewStatus` 3/3, `EmailNotificationType` 9/9, `EmailNotificationStatus` 3/3, 6/6 etapas com equipe. Também incluído `MOCK_TEAM_STAGE_HISTORY`, `MOCK_TEAM_NOTES`, `MOCK_TASK_TEMPLATES` e `MOCK_EMAIL_NOTIFICATIONS` (não estavam explícitos no escopo original, mas são necessários pros tickets T-FE-08/09/12 e para o dashboard).
 
 ### Ticket: T-FE-04 Camada de services (contratos assíncronos)
 - **Priority:** P0
