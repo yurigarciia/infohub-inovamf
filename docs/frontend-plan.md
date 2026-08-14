@@ -186,9 +186,13 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-07 Formulário público de inscrição (Etapa 1)
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Todos os campos da Seção 4.2, incluindo e-mail por integrante e campo repetível de colegas, consentimento LGPD, validação client-side (zod/react-hook-form).
 - **Acceptance Criteria:** Submissão válida adiciona uma equipe nova ao mock em memória, visível no painel do admin sem reload da página.
 - **Validation Steps:** Preencher e enviar; conferir card novo aparecendo no funil.
+- **Notes:** `/cadastro`, com `react-hook-form` + `zod` (instalados nesta etapa — `@hookform/resolvers` para a integração). Campo repetível de colegas via `useFieldArray`, cada um com nome/e-mail/curso/período (período incluído mesmo não estando explícito no texto do documento original, porque `student_profiles.period` é `NOT NULL` no schema — mesmo padrão aplicado ao líder). Submissão chama `createTeamFromInscription`, que agora retorna `{ team, leaderUserId }` (ajuste de contrato) para a página poder logar automaticamente o líder (RF-02: o próprio envio cria a conta de acesso) e redirecionar para `/aluno`. `cohort` fixo em `CURRENT_COHORT` (nova constante em `lib/constants.ts`, também usada pelos mocks). Confirmação de que o painel do admin (T-FE-08) mostrará a equipe nova fica pendente daquele ticket (ainda não existe UI de kanban); a criação em si já foi validada na camada de service (T-FE-04).
+
+  Dois bugs reais encontrados e corrigidos durante a validação visual: (1) `SelectValue` do Base UI não mostra o rótulo do item selecionado sem uma função `children` explícita — corrigido nos dois selects (área e estágio). (2) `SessionProvider` (T-FE-05) carregava a lista de usuários só uma vez no mount, então uma conta criada em runtime (o líder do formulário) não resolvia em `user` mesmo depois de `setUserId` — corrigido tornando `setUserId` assíncrono: ele recarrega a lista de usuários e só depois aplica o novo id, e os chamadores (`/login`, `/cadastro`) agora fazem `await`.
 
 ### Ticket: T-FE-08 Painel do administrador — funil/kanban
 - **Priority:** P0

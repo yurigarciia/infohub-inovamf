@@ -66,12 +66,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             {!user && (
-              <Link
-                href="/login"
-                className="text-sm font-medium text-brand-700 hover:text-brand-800"
-              >
-                Entrar
-              </Link>
+              <>
+                <Link
+                  href="/cadastro"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Enviar minha ideia
+                </Link>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-brand-700 hover:text-brand-800"
+                >
+                  Entrar
+                </Link>
+              </>
             )}
             <RoleSwitcher />
           </div>

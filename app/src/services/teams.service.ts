@@ -219,13 +219,21 @@ export interface CreateTeamFromInscriptionInput {
   cohort: string;
 }
 
+export interface CreateTeamFromInscriptionResult {
+  team: Team;
+  /** Id da conta do líder (nova ou já existente) — RF-02: o próprio
+   * envio do formulário cria/reaproveita a conta de acesso do líder,
+   * então a UI pode logá-lo automaticamente após o cadastro. */
+  leaderUserId: string;
+}
+
 /** Formulário inicial do aluno — Etapa 1 (RF-02, RF-04, RF-05).
  * Para o líder e cada integrante, busca a conta por e-mail e só cria
  * se não existir (T005 em PLAN.md) — evita duplicar quando o aluno já
  * integra outra equipe (Q4). */
 export async function createTeamFromInscription(
   input: CreateTeamFromInscriptionInput,
-): Promise<Team> {
+): Promise<CreateTeamFromInscriptionResult> {
   const leaderUser = await findOrCreateStudentByEmail(input.leader);
   const memberUsers = [];
   for (const member of input.members) {
@@ -285,5 +293,5 @@ export async function createTeamFromInscription(
     });
   }
 
-  return team;
+  return { team, leaderUserId: leaderUser.id };
 }

@@ -24,7 +24,7 @@ interface SessionContextValue {
   user: User | null;
   users: User[];
   isLoading: boolean;
-  setUserId: (userId: string) => void;
+  setUserId: (userId: string) => Promise<void>;
   signOut: () => void;
 }
 
@@ -50,9 +50,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setUserId = (nextUserId: string) => {
-    setUserIdState(nextUserId);
+  const setUserId = async (nextUserId: string) => {
     window.localStorage.setItem(STORAGE_KEY, nextUserId);
+    // A lista carregada no mount pode não ter uma conta criada depois
+    // (ex.: líder recém-cadastrado via /cadastro) — recarrega e só then
+    // atualiza o id, pra `user` já resolver de primeira (sem "piscar"
+    // como deslogado enquanto a lista atualiza). Quem chama pode `await`
+    // isso antes de navegar.
+    const refreshed = await listUsers();
+    setUsers(refreshed);
+    setUserIdState(nextUserId);
   };
 
   const signOut = () => {

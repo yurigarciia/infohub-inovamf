@@ -5,9 +5,10 @@
 
 import { IdeaMaturity, TeamMemberRole } from "@/types";
 import type { Team, TeamMember, TeamMentor, TeamNote, TeamStageHistory } from "@/types";
+import { CURRENT_COHORT } from "@/lib/constants";
 import { daysFromNow } from "../utils";
 
-const COHORT = "2026.2";
+const COHORT = CURRENT_COHORT;
 
 export const MOCK_TEAMS: Team[] = [
   {

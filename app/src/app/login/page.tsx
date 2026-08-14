@@ -33,7 +33,7 @@ export default function LoginPage() {
         setError("E-mail ou senha inválidos.");
         return;
       }
-      setUserId(user.id);
+      await setUserId(user.id);
       router.push(user.role === UserRole.STUDENT ? "/aluno" : "/admin");
     } finally {
       setIsSubmitting(false);
