@@ -70,14 +70,13 @@ model User {
   email             String    @unique
   passwordHash      String    @map("password_hash")
   phone             String?
-  course            String?   // curso do aluno (RF-04); NULL para admin/mentor
-  period            String?   // semestre/período do aluno (RF-04); NULL para admin/mentor
   role              UserRole
   isActive          Boolean   @default(true) @map("is_active")
   lgpdConsentedAt   DateTime? @map("lgpd_consented_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
+  studentProfile    StudentProfile?
   teamMemberships   TeamMember[]
   mentoredTeams     TeamMentor[]
   authoredNotes     TeamNote[]
@@ -89,6 +88,21 @@ model User {
   auditLogs         AuditLog[]
 
   @@map("users")
+}
+
+/// Extensão 1:1 de User, exclusiva para role = STUDENT. course/period
+/// são atributos da pessoa (não da participação numa equipe — por
+/// isso não ficam em TeamMember, evitando duplicação quando o aluno
+/// integra várias equipes, Q4), mas só existem para alunos, por isso
+/// não ficam em User.
+model StudentProfile {
+  userId String @id @map("user_id")
+  course String
+  period String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
 }
 
 /// Área/setor da ideia, lista configurável pelo administrador.

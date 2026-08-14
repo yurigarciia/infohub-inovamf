@@ -9,10 +9,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
 -- ---------------------------------------------------------------------
 -- 1. USERS — administradores, mentores e alunos (líder ou integrante).
 --    A distinção líder/integrante é POR EQUIPE (ver team_members),
---    não um atributo global do usuário (Q1). course/period ficam AQUI
---    (e não em team_members) por serem atributos da pessoa, não da
---    participação numa equipe específica — evita duplicação e
---    inconsistência quando o aluno integra mais de uma equipe (Q4).
+--    não um atributo global do usuário (Q1). Atributos específicos de
+--    aluno (course/period) NÃO ficam aqui — ver student_profiles
+--    abaixo — pois não se aplicam a admin/mentor (evita colunas
+--    sempre NULL para 2 dos 3 papéis).
 -- ---------------------------------------------------------------------
 CREATE TABLE users (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,14 +20,25 @@ CREATE TABLE users (
     email               VARCHAR(255) NOT NULL UNIQUE,
     password_hash       VARCHAR(255) NOT NULL,
     phone               VARCHAR(20),
-    course              VARCHAR(150),              -- curso do aluno (RF-04); NULL para admin/mentor
-    period              VARCHAR(20),                -- semestre/periodo do aluno (RF-04); NULL para admin/mentor
     role                VARCHAR(20) NOT NULL
                           CHECK (role IN ('ADMIN', 'MENTOR', 'STUDENT')),
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
     lgpd_consented_at   TIMESTAMPTZ,               -- RNF-02
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
+-- 1.1 STUDENT_PROFILES — extensão 1:1 de users, exclusiva para
+--     role = 'STUDENT'. course/period são atributos da PESSOA (não da
+--     participação numa equipe — por isso não ficam em team_members,
+--     evitando duplicação quando o aluno integra várias equipes, Q4),
+--     mas só existem para alunos — por isso não ficam em users.
+-- ---------------------------------------------------------------------
+CREATE TABLE student_profiles (
+    user_id  UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    course   VARCHAR(150) NOT NULL,
+    period   VARCHAR(20) NOT NULL
 );
 
 -- ---------------------------------------------------------------------

@@ -7,13 +7,17 @@ Table users {
   email              varchar   [unique, not null]
   password_hash      varchar
   phone              varchar
-  course             varchar   [note: "curso do aluno; null para admin/mentor"]
-  period             varchar   [note: "semestre/periodo do aluno; null para admin/mentor"]
   role               varchar   [note: "ADMIN | MENTOR | STUDENT"]
   is_active          boolean
   lgpd_consented_at  timestamp
   created_at         timestamp
   updated_at         timestamp
+}
+
+Table student_profiles {
+  user_id  uuid      [pk, ref: - users.id, note: "1:1, so para role = STUDENT"]
+  course   varchar
+  period   varchar
 }
 
 Table idea_areas {

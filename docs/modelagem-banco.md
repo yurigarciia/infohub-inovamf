@@ -11,6 +11,7 @@ Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerado
 | Tabela | Cobre |
 |---|---|
 | `users` | RF-01, RF-02, RF-03 (login, cadastro, gestão de contas) |
+| `student_profiles` | RF-04 (curso/período do aluno), exclusiva de `role = STUDENT` |
 | `idea_areas` | RF-04 (lista de área/setor configurável) |
 | `journey_stages` | as 6 etapas fixas do funil (Seção 3 do documento de requisitos) |
 | `teams` | RF-04, RF-05 (cadastro da ideia/equipe), RF-06, RF-24 (`cohort`) |
@@ -27,7 +28,11 @@ Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerado
 
 RF-22 (dashboard) e RF-23 (export CSV) são resolvidos por consulta sobre as tabelas acima — não exigem tabela própria.
 
-**Ajuste de normalização:** `course`/`period` (curso e semestre/período do aluno) ficam em `users`, não em `team_members`. São atributos da pessoa, não da participação numa equipe específica — mantê-los em `team_members` duplicaria o dado a cada equipe que o aluno integrasse (Q4) e exigiria editar em N lugares a cada mudança de curso/período, violando a Terceira Forma Normal (dependência de um atributo não-chave em relação a outro atributo não-chave, e não à chave primária da tabela de associação).
+**Ajuste de normalização:** `course`/`period` (curso e semestre/período do aluno) não ficam em `team_members`, nem em `users`.
+
+- Não em `team_members`: são atributos da **pessoa**, não da participação numa equipe específica. Mantê-los ali duplicaria o dado a cada equipe que o aluno integrasse (Q4) e exigiria editar em N lugares a cada mudança de curso/período — violação de 3FN.
+- Não em `users`: `admin` e `mentor` também são `users`, e não têm curso/período — colocar ali criaria colunas sempre `NULL` para 2 dos 3 papéis (um cheiro clássico de "atributo de subtipo numa tabela genérica").
+- Solução: `student_profiles`, tabela em relação **1:1** com `users` (chave primária = chave estrangeira, `user_id`), existindo apenas para linhas com `role = 'STUDENT'`. Segue o padrão de "tabela por subtipo" (table-per-subtype).
 
 ## 2. Atributos e chave primária
 
@@ -35,6 +40,7 @@ Todas as tabelas de entidade de negócio usam `UUID` como chave primária (`gen_
 
 ## 3. Relacionamentos
 
+- **1:1**: `users ↔ student_profiles` (só existe quando `role = 'STUDENT'`).
 - **1:N**: `idea_areas → teams`, `journey_stages → teams/tasks/task_templates/team_stage_history`, `teams → tasks/team_notes/team_stage_history`, `tasks → task_submissions/task_reminders`, `users → team_notes/audit_logs/email_notifications` (como autor/ator/destinatário).
 - **N:N** (via tabela associativa): `users ↔ teams` através de `team_members` (um aluno pode ter contas em múltiplas equipes — Q4) e `users ↔ teams` através de `team_mentors` (um mentor pode atender várias equipes, uma equipe pode ter mais de um mentor).
 
