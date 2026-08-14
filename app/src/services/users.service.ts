@@ -13,6 +13,13 @@ export async function getUserById(id: string): Promise<User | null> {
   return MOCK_USERS.find((u) => u.id === id) ?? null;
 }
 
+/** Lista todos os usuários — usada hoje pelo seletor de "papel ativo"
+ * (T-FE-05), que substitui o login real enquanto ele não existe (T-FE-06). */
+export async function listUsers(): Promise<User[]> {
+  await delay();
+  return [...MOCK_USERS];
+}
+
 export async function findUserByEmail(email: string): Promise<User | null> {
   await delay();
   const normalized = email.trim().toLowerCase();

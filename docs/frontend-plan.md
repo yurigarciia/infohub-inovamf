@@ -170,9 +170,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-05 Layout base + navegação por papel
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Shell da aplicação (header com logo/wordmark, navegação lateral ou superior), com um seletor de "papel ativo" (mock de sessão) para alternar entre admin/mentor/aluno líder/aluno integrante durante a demo, já que não há login real ainda.
 - **Acceptance Criteria:** Trocar o papel ativo muda os itens de menu visíveis, refletindo RNF-03.
 - **Validation Steps:** Teste manual alternando papel e conferindo itens de menu.
+- **Notes:** `lib/session.tsx` (Context + `useSession()`, persiste o usuário ativo em `localStorage`, resolve via `services/users.service.listUsers()` — nunca importa mocks direto) + `components/layout/{app-shell,role-switcher}.tsx`. Distinção líder/integrante no rótulo do seletor vem de `teams.service.getStudentMemberRoleSummary()` (nova função), respeitando Q1 (a distinção é por equipe, não papel global do usuário). Criadas rotas placeholder `/admin` e `/aluno` (stub, conteúdo real chega em T-FE-08/T-FE-10) só para a navegação não ter links quebrados. Validado com screenshot: sem sessão não há nav; escolher um admin mostra "Funil de equipes"; escolher uma aluna integrante troca para "Minhas tarefas". Nenhum erro no console. Quando o login real existir (T-FE-06), este provider deve ser trocado pelo resultado da autenticação de fato — `useSession()` continua a mesma API para quem consome.
 
 ### Ticket: T-FE-06 Tela de login (mock)
 - **Priority:** P0

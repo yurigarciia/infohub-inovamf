@@ -37,6 +37,21 @@ export async function getIdeaAreas(): Promise<IdeaArea[]> {
   return [...MOCK_IDEA_AREAS];
 }
 
+/** Para cada aluno com pelo menos uma equipe, indica se ele é líder em
+ * alguma delas ou só integrante em todas — usado hoje pelo seletor de
+ * "papel ativo" (T-FE-05) pra rotular a conta de demonstração (Q1: a
+ * distinção líder/integrante é por equipe, não um papel global). */
+export async function getStudentMemberRoleSummary(): Promise<Map<string, TeamMemberRole>> {
+  await delay(50);
+  const summary = new Map<string, TeamMemberRole>();
+  for (const member of MOCK_TEAM_MEMBERS) {
+    const current = summary.get(member.userId);
+    if (current === TeamMemberRole.LEADER) continue;
+    summary.set(member.userId, member.memberRole);
+  }
+  return summary;
+}
+
 function getStageOrThrow(stageId: number): JourneyStage {
   const stage = MOCK_JOURNEY_STAGES.find((s) => s.id === stageId);
   if (!stage) throw new Error(`Etapa ${stageId} não encontrada.`);
