@@ -127,9 +127,9 @@ src/
 - **Priority:** P0
 - **Status:** Todo
 - **Owner:** Unassigned
-- **Scope:** Formulário público com todos os campos da Seção 4.2, validação client+server (zod), criação automática de conta do aluno líder, contas dos integrantes informados (A1) e do registro da equipe na Etapa 1 (RF-02, RF-04, RF-05). Deve permitir que um aluno já cadastrado (por já integrar outra equipe) seja associado a uma nova equipe sem duplicar o `User` (A4).
-- **Acceptance Criteria:** Envio válido cria/associa `User`(s), `Team`, `TeamMember`(s) e posiciona a equipe na Etapa 1; envio inválido bloqueia com mensagens de erro.
-- **Validation Steps:** Teste de integração cobrindo submissão válida, inválida, e submissão de um aluno que já participa de outra equipe ativa.
+- **Scope:** Formulário público com todos os campos da Seção 4.2, incluindo **e-mail obrigatório de cada colega de equipe** (não só nome/curso), validação client+server (zod). Para o líder e cada integrante informado, o backend faz **lookup por e-mail em `users`**: se já existe uma conta com aquele e-mail, apenas vincula (`team_members`) sem duplicar o `User` (A4); se não existe, cria a conta (`User` com `role=STUDENT` + `student_profiles`) — provavelmente com senha provisória/convite por e-mail, a detalhar em T004. Cria também o registro da equipe na Etapa 1 (RF-02, RF-04, RF-05).
+- **Acceptance Criteria:** Envio válido cria/associa `User`(s) por e-mail (sem duplicar quem já existe), `Team`, `TeamMember`(s) e posiciona a equipe na Etapa 1; envio inválido (incluindo e-mail de colega ausente/mal formatado) bloqueia com mensagens de erro.
+- **Validation Steps:** Teste de integração cobrindo: submissão válida com todos e-mails novos; submissão com um integrante cujo e-mail já existe em `users` (deve vincular, não duplicar); submissão de um aluno que já participa de outra equipe ativa; submissão inválida (e-mail de colega faltando).
 - **Notes:** Dispara e-mail ao admin (depende de T010, pode ser stub inicialmente).
 
 ### Ticket: T006 Máquina de estados do funil (6 etapas)

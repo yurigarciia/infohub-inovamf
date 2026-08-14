@@ -56,6 +56,8 @@ Todas as tabelas de entidade de negócio usam `UUID` como chave primária (`gen_
 | Q6 — etapa pós-InovAMF | Não existe | `teams.is_ready_for_inovamf` é o status final; não há etapa 7 em `journey_stages` |
 | Q7 — serviço de e-mail | Resend | `email_notifications.provider_message_id` guarda o id retornado pelo Resend |
 
+**Fluxo de cadastro por e-mail (formulário inicial, T005):** o formulário da Etapa 1 pede o e-mail de cada integrante, não só nome/curso. Para cada e-mail informado (líder e colegas), o backend faz *lookup* em `users.email` (`UNIQUE`): se já existe conta, apenas cria o vínculo em `team_members`; se não existe, cria o `User` (+ `student_profiles`). Isso evita contas duplicadas quando o mesmo aluno é convidado por equipes diferentes (Q4) e é o motivo de `users.email` ser `UNIQUE` no schema.
+
 ## 5. DER no dbdiagram.io
 
 Importar `db/diagram.dbml` em https://dbdiagram.io via **Import → DBML** para projetar o diagrama no telão.
