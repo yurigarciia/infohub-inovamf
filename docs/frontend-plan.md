@@ -138,9 +138,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-01 Setup Next.js + Tailwind + shadcn/ui + tema InfoHub
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Inicializar o projeto Next.js (se ainda não existir a partir de T001 do `PLAN.md`), instalar Tailwind, inicializar shadcn/ui, configurar `tailwind.config` com a paleta `brand-*`/`neutral-*` da Seção 2, importar fonte via `next/font`.
 - **Acceptance Criteria:** `npm run dev` sobe uma página inicial usando as cores de marca; um componente shadcn instalado (ex.: `button`) renderiza com o tema aplicado.
 - **Validation Steps:** `npm run dev`, inspecionar visualmente botão primário com `bg-brand-600`.
+- **Notes:** Tailwind v4 não usa `tailwind.config.js` — os tokens `brand-50..900` foram definidos como CSS custom properties em `src/app/globals.css` (`:root` + bloco `@theme inline`), que é o equivalente na v4. Fonte trocada de Geist para Inter (conforme Seção 2.2). Validado visualmente via screenshot (build + lint limpos).
 
 ### Ticket: T-FE-02 Estrutura de types/ espelhando o schema Prisma
 - **Priority:** P0
