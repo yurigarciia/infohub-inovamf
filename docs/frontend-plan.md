@@ -196,9 +196,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-08 Painel do administrador — funil/kanban
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Board com 6 colunas (etapas), cards de equipe, busca e filtros (nome, curso, área, status de tarefa, mentor).
 - **Acceptance Criteria:** Filtros combinam corretamente (AND); busca por nome é case-insensitive.
 - **Validation Steps:** Teste manual combinando 2+ filtros.
+- **Notes:** `/admin` substitui o placeholder do T-FE-05. 6 colunas (`getJourneyStages()`), cards com área, líder marcado e badge "Pronta p/ InovAMF" quando aplicável. Filtros (busca, curso, área, status de tarefa, mentor) combinam em AND via `getTeamsByStage(filters)` — todos opcionais, `getIdeaAreas()`/nova `getMentors()` (`users.service.ts`) alimentam os selects. Nova regra de lint (`react-hooks/set-state-in-effect`, provavelmente do React 19/Next 16) barrou `setIsLoading(true)` síncrono no corpo do effect de filtro — corrigido adiando a chamada para dentro de um `Promise.resolve().then()`. Validado com screenshot + smoke test: busca por "EcoRota" isola 1 equipe, filtro de status "Atrasada" encontra corretamente a FinPlan (única com tarefa LATE). Sem erros de console. Clique para abrir detalhe da equipe fica para o T-FE-09 (rota ainda não existe).
 
 ### Ticket: T-FE-09 Página de detalhe da equipe
 - **Priority:** P0

@@ -20,6 +20,12 @@ export async function listUsers(): Promise<User[]> {
   return [...MOCK_USERS];
 }
 
+/** Mentores disponíveis para o filtro "mentor responsável" (RF-07). */
+export async function getMentors(): Promise<User[]> {
+  await delay();
+  return MOCK_USERS.filter((u) => u.role === UserRole.MENTOR);
+}
+
 export async function findUserByEmail(email: string): Promise<User | null> {
   await delay();
   const normalized = email.trim().toLowerCase();
