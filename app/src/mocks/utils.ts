@@ -6,3 +6,9 @@ export function daysFromNow(days: number): Date {
   date.setDate(date.getDate() + days);
   return date;
 }
+
+/** Id legível para registros criados em runtime pelos services (mutações
+ * no mock em memória) — mesmo formato dos ids fixos do dataset inicial. */
+export function generateId(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}

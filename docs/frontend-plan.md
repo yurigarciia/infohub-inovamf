@@ -162,9 +162,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-04 Camada de services (contratos assíncronos)
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Implementar `services/*.service.ts` conforme Seção 4.1, cobrindo as consultas necessárias para as 8 telas P0.
 - **Acceptance Criteria:** Nenhum componente importa de `mocks/` diretamente; toda leitura passa por uma função de `services/`.
 - **Validation Steps:** Busca no código por imports de `mocks/` fora de `services/` — deve retornar vazio.
+- **Notes:** `app/src/services/{users,journey,teams,tasks,notifications}.service.ts` + `latency.ts` (delay simulado) + `index.ts` barril. Todas as funções são `async`, recebem parâmetros no formato final (`TeamFilters`, inputs tipados) e retornam os tipos "view" de `types/`. Mutações (`advanceTeamStage`, `createTeamFromInscription`, `submitTask`, `reviewSubmission`, `addTeamNote`) alteram os arrays mock em memória e disparam `recordNotification` (log de e-mail mockado), replicando os efeitos colaterais que a versão real vai ter. `createTeamFromInscription` implementa o *lookup-or-create* por e-mail (T005 em PLAN.md): reaproveita conta existente em vez de duplicar. `submitTask`/`reviewSubmission` implementam o versionamento de entregas (RF-16). Validado com um smoke test ad-hoc (não commitado) exercitando os 8 fluxos P0 de ponta a ponta — todos passaram.
 
 ### Ticket: T-FE-05 Layout base + navegação por papel
 - **Priority:** P0

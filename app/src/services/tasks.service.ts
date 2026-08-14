@@ -1,0 +1,153 @@
+// Camada de acesso a tarefas e entregas. Hoje lê/escreve nos mocks em
+// memória; amanhã troca para Prisma/API sem mudar as assinaturas (ver
+// docs/frontend-plan.md, Seção 4.1).
+
+import {
+  MOCK_TASK_SUBMISSIONS,
+  MOCK_TASKS,
+  MOCK_TEAM_MEMBERS,
+  MOCK_USERS,
+} from "@/mocks/data";
+import { generateId } from "@/mocks/utils";
+import { ReviewStatus, TaskStatus, UserRole } from "@/types";
+import type {
+  Task,
+  TaskSubmission,
+  TaskSubmissionWithUsers,
+  TaskWithDetails,
+} from "@/types";
+import { delay } from "./latency";
+import { recordNotification } from "./notifications.service";
+
+function toSubmissionWithUsers(submission: TaskSubmission): TaskSubmissionWithUsers {
+  const submittedBy = MOCK_USERS.find((u) => u.id === submission.submittedById);
+  if (!submittedBy) throw new Error(`Usuário ${submission.submittedById} não encontrado.`);
+  const reviewedBy = submission.reviewedById
+    ? (MOCK_USERS.find((u) => u.id === submission.reviewedById) ?? null)
+    : null;
+  return { ...submission, submittedBy, reviewedBy };
+}
+
+function toTaskWithDetails(task: Task): TaskWithDetails {
+  const submissions = MOCK_TASK_SUBMISSIONS.filter((s) => s.taskId === task.id)
+    .map(toSubmissionWithUsers)
+    .sort((a, b) => b.version - a.version);
+  return { ...task, submissions, reminders: [] };
+}
+
+/** Página de detalhe da equipe (RF-08) e lista de tarefas por equipe. */
+export async function getTasksForTeam(teamId: string): Promise<TaskWithDetails[]> {
+  await delay();
+  return MOCK_TASKS.filter((t) => t.teamId === teamId).map(toTaskWithDetails);
+}
+
+/** Área do aluno — tarefas de todas as equipes que ele integra (RF-13),
+ * já que um aluno pode participar de mais de uma equipe (Q4). */
+export async function getTasksForStudent(userId: string): Promise<TaskWithDetails[]> {
+  await delay();
+  const teamIds = new Set(
+    MOCK_TEAM_MEMBERS.filter((m) => m.userId === userId).map((m) => m.teamId),
+  );
+  return MOCK_TASKS.filter((t) => teamIds.has(t.teamId)).map(toTaskWithDetails);
+}
+
+export async function getTaskDetail(taskId: string): Promise<TaskWithDetails> {
+  await delay();
+  const task = MOCK_TASKS.find((t) => t.id === taskId);
+  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
+  return toTaskWithDetails(task);
+}
+
+export interface SubmitTaskInput {
+  taskId: string;
+  submittedById: string;
+  fileUrl: string;
+  isExternalLink: boolean;
+}
+
+/** RF-14: envio de entrega (arquivo ou link — Q3 no caso do Pitch Vídeo).
+ * RF-16: mantém as versões anteriores, marcando só a nova como atual. */
+export async function submitTask(input: SubmitTaskInput): Promise<TaskSubmission> {
+  const task = MOCK_TASKS.find((t) => t.id === input.taskId);
+  if (!task) throw new Error(`Tarefa ${input.taskId} não encontrada.`);
+
+  await delay();
+  const now = new Date();
+
+  const previousSubmissions = MOCK_TASK_SUBMISSIONS.filter((s) => s.taskId === input.taskId);
+  for (const previous of previousSubmissions) previous.isCurrent = false;
+  const nextVersion = previousSubmissions.length
+    ? Math.max(...previousSubmissions.map((s) => s.version)) + 1
+    : 1;
+
+  const submission: TaskSubmission = {
+    id: generateId("sub"),
+    taskId: input.taskId,
+    submittedById: input.submittedById,
+    fileUrl: input.fileUrl,
+    isExternalLink: input.isExternalLink,
+    version: nextVersion,
+    isCurrent: true,
+    submittedAt: now,
+    reviewStatus: ReviewStatus.PENDING,
+    reviewComment: null,
+    reviewedById: null,
+    reviewedAt: null,
+  };
+  MOCK_TASK_SUBMISSIONS.push(submission);
+
+  task.status = TaskStatus.SUBMITTED;
+  task.updatedAt = now;
+
+  const admins = MOCK_USERS.filter((u) => u.role === UserRole.ADMIN);
+  for (const admin of admins) {
+    await recordNotification({
+      recipientUserId: admin.id,
+      type: "FILE_SUBMITTED",
+      subject: `Novo arquivo entregue: ${task.title}`,
+      relatedTeamId: task.teamId,
+      relatedTaskId: task.id,
+    });
+  }
+
+  return submission;
+}
+
+export interface ReviewSubmissionInput {
+  submissionId: string;
+  reviewedById: string;
+  decision: typeof ReviewStatus.APPROVED | typeof ReviewStatus.REJECTED;
+  reviewComment?: string;
+}
+
+/** RF-15: aprovar (conclui a tarefa) ou reprovar (reabre com comentário). */
+export async function reviewSubmission(input: ReviewSubmissionInput): Promise<TaskSubmission> {
+  const submission = MOCK_TASK_SUBMISSIONS.find((s) => s.id === input.submissionId);
+  if (!submission) throw new Error(`Entrega ${input.submissionId} não encontrada.`);
+  const task = MOCK_TASKS.find((t) => t.id === submission.taskId);
+  if (!task) throw new Error(`Tarefa ${submission.taskId} não encontrada.`);
+
+  await delay();
+  const now = new Date();
+
+  submission.reviewStatus = input.decision;
+  submission.reviewComment = input.reviewComment ?? null;
+  submission.reviewedById = input.reviewedById;
+  submission.reviewedAt = now;
+
+  task.status = input.decision === ReviewStatus.APPROVED ? TaskStatus.APPROVED : TaskStatus.REJECTED;
+  task.updatedAt = now;
+
+  await recordNotification({
+    recipientUserId: submission.submittedById,
+    type: input.decision === ReviewStatus.APPROVED ? "SUBMISSION_APPROVED" : "SUBMISSION_REJECTED",
+    subject:
+      input.decision === ReviewStatus.APPROVED
+        ? `Entrega aprovada: ${task.title}`
+        : `Ajustes solicitados: ${task.title}`,
+    relatedTeamId: task.teamId,
+    relatedTaskId: task.id,
+  });
+
+  return submission;
+}
