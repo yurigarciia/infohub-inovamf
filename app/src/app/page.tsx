@@ -31,7 +31,7 @@ export default function Home() {
       <section className="relative flex flex-col items-center gap-6 overflow-hidden px-6 py-20 text-center text-white">
         <HeroBackgroundVideo />
         <div className="relative flex flex-col items-center gap-2">
-          <Image src="/logotipo.png" alt="" width={56} height={56} className="mb-1 h-14 w-14" />
+          <Image src="/logotipo.png" alt="" width={112} height={112} className="mb-1 h-28 w-28" />
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Do esboço de uma ideia à inscrição no InovAMF
           </h1>
