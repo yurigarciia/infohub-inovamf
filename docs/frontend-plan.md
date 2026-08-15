@@ -353,6 +353,14 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   **Ajuste seguinte (mesmo ticket):** reintroduzido o ícone antigo (`logotipo.png`, sem o wordmark) acima do título do hero — pedido do usuário pra "ganhar mais espaço" visualmente na composição (o hero tinha ficado só com texto+CTAs depois da T-FE-23 remover o ícone duplicado). `alt=""` porque é decorativo — o header já tem a logo com `alt` acessível, evitando anúncio duplicado pra leitor de tela.
 
+### Ticket: T-FE-25 Conteúdo institucional na landing page
+- **Priority:** P2
+- **Status:** Done
+- **Scope:** Landing estava muito enxuta (só hero + as 6 etapas). Usuário pediu análise do site oficial do InovAMF (`faculdadeamonline.com.br/inovamf`) e incorporação do conteúdo institucional relevante — quem chega no InfoHub sem contexto não sabe o que é o InovAMF nem por que vale a pena chegar até lá.
+- **Acceptance Criteria:** Landing ganha seções novas com conteúdo real (não placeholder) extraído do site institucional: o que é o programa, benefícios de participar, CTA final e rodapé com localização/instituições. Mantém o estilo visual já estabelecido (cores de marca, cards com borda, mesmo padrão dos outros componentes de `landing/`).
+- **Validation Steps:** Fetch do site oficial pra extrair conteúdo real; conferir visualmente todas as seções novas em desktop e 375px; checar sem overflow e sem erros de console.
+- **Notes:** Conteúdo extraído via fetch de `faculdadeamonline.com.br/inovamf` (slogan "Humanismo, Negócios & Tecnologia", objetivos, benefícios, estrutura física, localização). Três componentes novos em `components/landing/`, cada um com uma responsabilidade: `about-inovamf.tsx` (o que é o programa, resumo institucional), `inovamf-benefits.tsx` (grid de 5 benefícios com ícone `lucide-react` — mentoria, infraestrutura, incubação/aceleração, parcerias, mentalidade empreendedora), `landing-footer.tsx` (instituições fundadoras + localização no Recanto Maestro). `app/page.tsx` ganhou também uma seção de CTA final (mesmo gradiente de marca do hero) antes do rodapé. Conteúdo é estático (não vem de `services/`/mocks — é institucional, não dado de domínio do InfoHub) por isso os componentes não são `"use client"` nem têm estado. Validado com screenshot full-page em desktop e 375px: todas as seções renderizam corretamente, sem overflow horizontal, sem erros de console.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.
