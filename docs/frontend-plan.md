@@ -238,9 +238,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-13 Lembretes (configuração + manual)
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** UI de configurar datas de lembrete por tarefa e disparar lembrete manual avulso (sem envio real de e-mail — apenas registro visual "lembrete enviado").
 - **Acceptance Criteria:** Lembrete configurado aparece listado na tarefa; disparo manual muda um indicador visual de "último lembrete".
 - **Validation Steps:** Teste manual configurando e disparando lembrete.
+- **Notes:** Corrigido um bug latente: `toTaskWithDetails` (T-FE-04) sempre retornava `reminders: []` hardcoded, nunca lendo `MOCK_TASK_REMINDERS` — corrigido para resolver de verdade. Novo `configureReminder`/`sendManualReminder` em `tasks.service.ts`; disparo manual também notifica todos os membros da equipe (`MANUAL_REMINDER`, RF-18). UI (`ReminderSection`, dentro do card de tarefa em `/admin/equipes/[teamId]`, staff-only) lista os lembretes existentes, mostra "Último lembrete enviado", e tem os dois controles: "Enviar lembrete agora" e "Configurar lembrete automático" (data). O disparo automático de fato (job varrendo tarefas na data configurada) é trabalho de backend — fora do escopo do frontend mockado. Validado com screenshot: lembrete manual aparece na lista com "(manual)" e atualiza o indicador; lembrete automático configurado aparece como "agendado". Sem erros de console.
 
 ### Ticket: T-FE-14 Dashboard com indicadores
 - **Priority:** P1

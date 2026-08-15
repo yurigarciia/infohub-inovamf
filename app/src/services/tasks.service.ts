@@ -3,6 +3,7 @@
 // docs/frontend-plan.md, Seção 4.1).
 
 import {
+  MOCK_TASK_REMINDERS,
   MOCK_TASK_SUBMISSIONS,
   MOCK_TASK_TEMPLATES,
   MOCK_TASKS,
@@ -14,6 +15,7 @@ import { generateId } from "@/mocks/utils";
 import { ReviewStatus, TaskStatus, UserRole } from "@/types";
 import type {
   Task,
+  TaskReminder,
   TaskSubmission,
   TaskSubmissionWithUsers,
   TaskTemplate,
@@ -36,7 +38,10 @@ function toTaskWithDetails(task: Task): TaskWithDetails {
   const submissions = MOCK_TASK_SUBMISSIONS.filter((s) => s.taskId === task.id)
     .map(toSubmissionWithUsers)
     .sort((a, b) => b.version - a.version);
-  return { ...task, submissions, reminders: [] };
+  const reminders = MOCK_TASK_REMINDERS.filter((r) => r.taskId === task.id).sort(
+    (a, b) => a.remindAt.getTime() - b.remindAt.getTime(),
+  );
+  return { ...task, submissions, reminders };
 }
 
 /** Página de detalhe da equipe (RF-08) e lista de tarefas por equipe. */
@@ -231,4 +236,59 @@ export async function reviewSubmission(input: ReviewSubmissionInput): Promise<Ta
   });
 
   return submission;
+}
+
+/** RF-17: configura uma data de lembrete automático para a tarefa. O
+ * disparo em si (varrer tarefas e enviar quando a data chegar) é
+ * trabalho de um job/worker no backend real — fora do escopo do
+ * frontend mockado, que só registra a configuração. */
+export async function configureReminder(taskId: string, remindAt: Date): Promise<TaskReminder> {
+  await delay();
+  const task = MOCK_TASKS.find((t) => t.id === taskId);
+  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
+
+  const reminder: TaskReminder = {
+    id: generateId("reminder"),
+    taskId,
+    remindAt,
+    isManual: false,
+    sent: false,
+    sentAt: null,
+    createdAt: new Date(),
+  };
+  MOCK_TASK_REMINDERS.push(reminder);
+  return reminder;
+}
+
+/** RF-20: lembrete manual avulso, disparado na hora pelo admin/mentor
+ * para uma equipe específica. */
+export async function sendManualReminder(taskId: string): Promise<TaskReminder> {
+  await delay();
+  const task = MOCK_TASKS.find((t) => t.id === taskId);
+  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
+
+  const now = new Date();
+  const reminder: TaskReminder = {
+    id: generateId("reminder"),
+    taskId,
+    remindAt: now,
+    isManual: true,
+    sent: true,
+    sentAt: now,
+    createdAt: now,
+  };
+  MOCK_TASK_REMINDERS.push(reminder);
+
+  const members = MOCK_TEAM_MEMBERS.filter((m) => m.teamId === task.teamId);
+  for (const member of members) {
+    await recordNotification({
+      recipientUserId: member.userId,
+      type: "MANUAL_REMINDER",
+      subject: `Lembrete: ${task.title}`,
+      relatedTeamId: task.teamId,
+      relatedTaskId: task.id,
+    });
+  }
+
+  return reminder;
 }
