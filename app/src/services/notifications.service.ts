@@ -7,6 +7,7 @@ import { MOCK_EMAIL_NOTIFICATIONS } from "@/mocks/data";
 import { generateId } from "@/mocks/utils";
 import { EmailNotificationStatus } from "@/types";
 import type { EmailNotification, EmailNotificationType } from "@/types";
+import { recordAuditLog } from "./audit.service";
 import { delay } from "./latency";
 
 export async function getNotificationsForUser(userId: string): Promise<EmailNotification[]> {
@@ -44,5 +45,14 @@ export async function recordNotification(
     createdAt: now,
   };
   MOCK_EMAIL_NOTIFICATIONS.push(notification);
+
+  await recordAuditLog({
+    actorUserId: null, // e-mail é disparado pelo sistema, não por um usuário
+    entityType: "email_notification",
+    entityId: notification.id,
+    action: "EMAIL_SENT",
+    metadata: { type: input.type, recipientUserId: input.recipientUserId },
+  });
+
   return notification;
 }

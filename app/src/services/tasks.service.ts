@@ -22,6 +22,7 @@ import type {
   TaskWithDetails,
   TaskWithTeam,
 } from "@/types";
+import { recordAuditLog } from "./audit.service";
 import { delay } from "./latency";
 import { recordNotification } from "./notifications.service";
 
@@ -233,6 +234,14 @@ export async function reviewSubmission(input: ReviewSubmissionInput): Promise<Ta
         : `Ajustes solicitados: ${task.title}`,
     relatedTeamId: task.teamId,
     relatedTaskId: task.id,
+  });
+
+  await recordAuditLog({
+    actorUserId: input.reviewedById,
+    entityType: "task_submission",
+    entityId: submission.id,
+    action: input.decision === ReviewStatus.APPROVED ? "SUBMISSION_APPROVED" : "SUBMISSION_REJECTED",
+    metadata: { taskId: task.id, reviewComment: submission.reviewComment ?? undefined },
   });
 
   return submission;

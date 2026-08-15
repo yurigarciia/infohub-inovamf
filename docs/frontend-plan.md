@@ -284,6 +284,19 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 - `npm run build` e `npm run lint` sem erros.
 - Checklist de RF-01 a RF-24 revisado: cada RF coberto nesta fase tem uma tela correspondente demonstrável; RFs que dependem de backend real (envio de e-mail de fato, persistência entre sessões) ficam marcados como "mock only" nesta etapa.
 
+## 6.1 Auditoria de conformidade RF/RNF (pós T-FE-17)
+
+Revisão feita depois de fechar os 17 tickets, comparando contra `docs/Infohub_InovAMF_Requisitos.md`. Nem tudo estava coberto — o que segue documenta o que foi corrigido nesta revisão e o que fica pendente de propósito.
+
+**Corrigido nesta revisão:**
+- **RNF-03 (controle de acesso) — gap real.** `/admin` (o kanban) não tinha nenhuma guarda de papel: um aluno ou visitante deslogado navegando direto pra URL via digitação enxergava o funil inteiro com dados internos de todas as equipes. Corrigido com guarda `ADMIN`/`MENTOR` (mesmo padrão já usado em `/admin/dashboard` e na página de detalhe da equipe).
+- **RNF-05 (auditoria) — não existia de fato.** O schema/tipos já tinham `AuditLog`, mas nenhum service gravava nele. Adicionado `services/audit.service.ts` (`recordAuditLog`/`getAuditLogs`), chamado a partir de `advanceTeamStage` (mudança de etapa), `reviewSubmission` (aprovação/reprovação) e `recordNotification` (todo envio de e-mail passa a gerar uma entrada — cobre literalmente os três eventos que RNF-05 pede). Nova tela `/admin/auditoria` (exclusiva `ADMIN`) lista os eventos mais recentes primeiro. Validado ao vivo: aprovar uma entrega gera duas linhas novas na auditoria (a aprovação e o e-mail disparado por causa dela).
+- **RNF-01 (mobile) — estendido para o admin.** T-FE-17 tinha testado só login/cadastro/aluno; ao reconferir, `/admin`, `/admin/dashboard` e a nova `/admin/auditoria` também foram validados em 375px (zero overflow de documento; a tabela de auditoria e as colunas do kanban rolam dentro do próprio container, o que é o padrão esperado pra dado tabular/kanban em tela pequena, não uma quebra de layout).
+
+**Documentado como dependência do backend real (não dá pra fazer bem feito só no mock):**
+- **RN-04 (marcação automática de tarefa atrasada).** A única tarefa com status `LATE` existe porque nasceu assim no seed (`task-4`) — não há nenhum código que recalcula isso em runtime. A regra de negócio de verdade ("tarefa vencida sem entrega vira atrasada automaticamente") exige um job/cron rodando no servidor comparando `dueDate` com a data atual — não existe "tempo passando" pra simular isso de forma confiável só no navegador. Fica para a fase de backend (`modules/notifications` ou um job dedicado, conforme `PLAN.md` Seção 5). Efeito colateral: os e-mails `TASK_LATE`/`DEADLINE_LATE` também nunca disparam de verdade nesta fase — só existem como registros estáticos no seed de `notifications.mock.ts`.
+- **RNF-02 (LGPD) — cobertura parcial, documentada.** O que dá pra fazer só no frontend foi feito: consentimento obrigatório no formulário de cadastro (`/cadastro`, T-FE-07) e o campo `lgpdConsentedAt` persistido no momento do cadastro. **Política de retenção e exclusão de dados fica fora do escopo do mock** — depende de um backend real com banco persistente; não faz sentido simular "excluir dados" sobre um array que já é efêmero (reseta a cada reload).
+
 ## 7. Observações para a integração futura com o backend
 
 - Ao trocar `services/` para chamadas reais, os `types/` em `src/types/*` devem passar a ser derivados do Prisma Client (`import type { Team } from '@prisma/client'`) em vez de interfaces manuais — nesta fase eles são escritos à mão porque ainda não existe `schema.prisma` gerado/migrado no banco real de desenvolvimento.

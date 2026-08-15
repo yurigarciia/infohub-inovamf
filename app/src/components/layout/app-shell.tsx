@@ -20,6 +20,7 @@ function navItemsForRole(role: UserRole | undefined): NavItem[] {
       return [
         { label: "Funil de equipes", href: "/admin" },
         { label: "Dashboard", href: "/admin/dashboard" },
+        { label: "Auditoria", href: "/admin/auditoria" },
       ];
     case UserRole.MENTOR:
       return [{ label: "Minhas equipes", href: "/admin" }];

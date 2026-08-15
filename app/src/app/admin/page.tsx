@@ -21,13 +21,17 @@ import {
 } from "@/services";
 import { downloadTextFile, toCsv } from "@/lib/csv";
 import { IDEA_MATURITY_LABELS, TASK_STATUS_LABELS } from "@/lib/labels";
-import { TaskStatus, TeamMemberRole } from "@/types";
+import { useSession } from "@/lib/session";
+import { TaskStatus, TeamMemberRole, UserRole } from "@/types";
 import type { IdeaArea, JourneyStage, TeamBoardItem, TeamFilters, User } from "@/types";
 
 const ALL_VALUE = "__all__";
 
-/** Painel do administrador/mentor — funil/kanban (RF-06, RF-07). */
+/** Painel do administrador/mentor — funil/kanban (RF-06, RF-07).
+ * RNF-03: restrito a ADMIN/MENTOR — aluno ou visitante não autenticado
+ * não deve ver dados internos de nenhuma equipe aqui. */
 export default function AdminHomePage() {
+  const { user, isLoading: sessionLoading } = useSession();
   const [stages, setStages] = useState<JourneyStage[]>([]);
   const [areas, setAreas] = useState<IdeaArea[]>([]);
   const [mentors, setMentors] = useState<User[]>([]);
@@ -77,6 +81,18 @@ export default function AdminHomePage() {
       cancelled = true;
     };
   }, [search, course, areaId, taskStatus, mentorId, cohort]);
+
+  if (sessionLoading) {
+    return <p className="px-6 py-8 text-sm text-muted-foreground">Carregando…</p>;
+  }
+
+  if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.MENTOR) {
+    return (
+      <p className="px-6 py-8 text-sm text-muted-foreground">
+        Esta área é exclusiva para administradores e mentores.
+      </p>
+    );
+  }
 
   const teamsByStage = new Map<number, TeamBoardItem[]>();
   for (const team of teams) {

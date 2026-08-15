@@ -27,6 +27,7 @@ import type {
   TeamNote,
   User,
 } from "@/types";
+import { recordAuditLog } from "./audit.service";
 import { canAdvanceToStage } from "./journey.service";
 import { delay } from "./latency";
 import { recordNotification } from "./notifications.service";
@@ -182,9 +183,18 @@ export async function advanceTeamStage(
     changedById,
   });
 
+  const fromStageId = team.currentStageId;
   team.currentStageId = toStageId;
   team.isReadyForInovamf = toStageId === 6 ? team.isReadyForInovamf : false;
   team.updatedAt = now;
+
+  await recordAuditLog({
+    actorUserId: changedById,
+    entityType: "team",
+    entityId: team.id,
+    action: "STAGE_ADVANCED",
+    metadata: { fromStageId, toStageId },
+  });
 
   return team;
 }
