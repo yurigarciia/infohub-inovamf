@@ -13,8 +13,9 @@ const STAGE_COLORS = [
   "bg-brand-800",
 ];
 
-/** As 6 etapas do funil, como um "como funciona" na landing page —
- * mesma escala de marca usada nos badges de etapa em outras telas. */
+/** As 6 etapas do funil, em formato de linha do tempo na landing page
+ * — horizontal em telas largas, empilhada em mobile — mesma escala de
+ * marca usada nos badges de etapa em outras telas. */
 export function JourneySteps() {
   const [stages, setStages] = useState<JourneyStage[]>([]);
 
@@ -23,11 +24,15 @@ export function JourneySteps() {
   }, []);
 
   return (
-    <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <ol className="relative flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-2">
+      <div aria-hidden="true" className="absolute top-4 right-4 left-4 hidden h-px bg-border sm:block" />
       {stages.map((stage, index) => (
-        <li key={stage.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
+        <li
+          key={stage.id}
+          className="relative flex flex-1 flex-row items-center gap-3 sm:flex-col sm:items-center sm:gap-2 sm:text-center"
+        >
           <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${STAGE_COLORS[index % STAGE_COLORS.length]}`}
+            className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${STAGE_COLORS[index % STAGE_COLORS.length]}`}
           >
             {stage.number}
           </span>

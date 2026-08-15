@@ -1,4 +1,4 @@
-import { Building2, GraduationCap, Handshake, Rocket, Users } from "lucide-react";
+import { Building2, GraduationCap, Handshake, Network, Rocket, Users } from "lucide-react";
 
 const BENEFITS = [
   {
@@ -25,6 +25,11 @@ const BENEFITS = [
     icon: GraduationCap,
     title: "Mentalidade empreendedora",
     description: "Programas educacionais focados em liderança e visão de negócio.",
+  },
+  {
+    icon: Network,
+    title: "Networking",
+    description: "Conexão direta com outros empreendedores e investidores.",
   },
 ];
 

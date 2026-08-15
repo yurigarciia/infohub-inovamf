@@ -10,7 +10,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-admin-1",
     name: "Ana Beatriz Souza",
-    email: "ana.souza@infohub.famf.br",
+    email: "ana.souza@infohub.amf.br",
     phone: "(55) 99999-0001",
     role: UserRole.ADMIN,
     isActive: true,
@@ -21,7 +21,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-mentor-1",
     name: "Carlos Eduardo Lima",
-    email: "carlos.lima@infohub.famf.br",
+    email: "carlos.lima@infohub.amf.br",
     phone: "(55) 99999-0002",
     role: UserRole.MENTOR,
     isActive: true,
@@ -32,7 +32,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-mentor-2",
     name: "Fernanda Ribeiro",
-    email: "fernanda.ribeiro@infohub.famf.br",
+    email: "fernanda.ribeiro@infohub.amf.br",
     phone: "(55) 99999-0003",
     role: UserRole.MENTOR,
     isActive: true,
@@ -43,7 +43,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-1",
     name: "João Pedro Alves",
-    email: "joao.alves@acad.famf.br",
+    email: "joao.alves@acad.amf.br",
     phone: "(55) 98888-0001",
     role: UserRole.STUDENT,
     isActive: true,
@@ -54,7 +54,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-2",
     name: "Marina Costa",
-    email: "marina.costa@acad.famf.br",
+    email: "marina.costa@acad.amf.br",
     phone: "(55) 98888-0002",
     role: UserRole.STUDENT,
     isActive: true,
@@ -65,7 +65,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-3",
     name: "Lucas Martins",
-    email: "lucas.martins@acad.famf.br",
+    email: "lucas.martins@acad.amf.br",
     phone: "(55) 98888-0003",
     role: UserRole.STUDENT,
     isActive: true,
@@ -76,7 +76,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-4",
     name: "Beatriz Fernandes",
-    email: "beatriz.fernandes@acad.famf.br",
+    email: "beatriz.fernandes@acad.amf.br",
     phone: "(55) 98888-0004",
     role: UserRole.STUDENT,
     isActive: true,
@@ -87,7 +87,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-5",
     name: "Rafael Oliveira",
-    email: "rafael.oliveira@acad.famf.br",
+    email: "rafael.oliveira@acad.amf.br",
     phone: "(55) 98888-0005",
     role: UserRole.STUDENT,
     isActive: true,
@@ -98,7 +98,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-6",
     name: "Camila Santos",
-    email: "camila.santos@acad.famf.br",
+    email: "camila.santos@acad.amf.br",
     phone: "(55) 98888-0006",
     role: UserRole.STUDENT,
     isActive: true,
@@ -109,7 +109,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-7",
     name: "Gustavo Pereira",
-    email: "gustavo.pereira@acad.famf.br",
+    email: "gustavo.pereira@acad.amf.br",
     phone: "(55) 98888-0007",
     role: UserRole.STUDENT,
     isActive: true,
@@ -120,7 +120,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-8",
     name: "Juliana Rocha",
-    email: "juliana.rocha@acad.famf.br",
+    email: "juliana.rocha@acad.amf.br",
     phone: "(55) 98888-0008",
     role: UserRole.STUDENT,
     isActive: true,
@@ -131,7 +131,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-9",
     name: "Pedro Henrique Souza",
-    email: "pedro.souza@acad.famf.br",
+    email: "pedro.souza@acad.amf.br",
     phone: "(55) 98888-0009",
     role: UserRole.STUDENT,
     isActive: true,
@@ -142,7 +142,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-10",
     name: "Larissa Almeida",
-    email: "larissa.almeida@acad.famf.br",
+    email: "larissa.almeida@acad.amf.br",
     phone: "(55) 98888-0010",
     role: UserRole.STUDENT,
     isActive: true,
@@ -153,7 +153,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-student-11",
     name: "Thiago Nascimento",
-    email: "thiago.nascimento@acad.famf.br",
+    email: "thiago.nascimento@acad.amf.br",
     phone: "(55) 98888-0011",
     role: UserRole.STUDENT,
     isActive: true,
@@ -165,7 +165,7 @@ export const MOCK_USERS: User[] = [
     // Turma anterior (2026.1) — usado pelo filtro por período (RF-24, T-FE-16).
     id: "user-student-12",
     name: "Vitória Campos",
-    email: "vitoria.campos@acad.famf.br",
+    email: "vitoria.campos@acad.amf.br",
     phone: "(55) 98888-0012",
     role: UserRole.STUDENT,
     isActive: true,

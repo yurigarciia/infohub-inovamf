@@ -2,9 +2,9 @@
 
 ## 1. Overview
 
-Construir o **InfoHub → InovAMF**, um sistema web que digitaliza o acompanhamento da jornada do empreendedor no laboratório InfoHub da Faculdade Antonio Meneghetti (FAMF). O sistema substitui o acompanhamento manual (planilhas + WhatsApp) por um painel onde administradores/mentores gerenciam o funil de 6 etapas de cada equipe, atribuem tarefas com prazo, recebem entregáveis e disparam lembretes automáticos por e-mail; alunos acompanham suas tarefas e enviam arquivos em uma área própria.
+Construir o **InfoHub → InovAMF**, um sistema web que digitaliza o acompanhamento da jornada do empreendedor no laboratório InfoHub da Faculdade Antonio Meneghetti (AMF). O sistema substitui o acompanhamento manual (planilhas + WhatsApp) por um painel onde administradores/mentores gerenciam o funil de 6 etapas de cada equipe, atribuem tarefas com prazo, recebem entregáveis e disparam lembretes automáticos por e-mail; alunos acompanham suas tarefas e enviam arquivos em uma área própria.
 
-Este é o projeto prático da disciplina de **Arquitetura de Sistemas** (graduação em Sistemas de Informação, FAMF). A disciplina é guiada em fases: a **Fase 1 (este plano)** entrega o sistema como **monolito**; fases futuras (fora deste PLAN.md, tratadas em revisões posteriores) irão refatorar incrementalmente partes do monolito para arquiteturas mais avançadas (ex.: extrair o disparo de notificações para um worker/fila dedicado, separar módulos em serviços independentes), conforme o conteúdo da cadeira avançar.
+Este é o projeto prático da disciplina de **Arquitetura de Sistemas** (graduação em Sistemas de Informação, AMF). A disciplina é guiada em fases: a **Fase 1 (este plano)** entrega o sistema como **monolito**; fases futuras (fora deste PLAN.md, tratadas em revisões posteriores) irão refatorar incrementalmente partes do monolito para arquiteturas mais avançadas (ex.: extrair o disparo de notificações para um worker/fila dedicado, separar módulos em serviços independentes), conforme o conteúdo da cadeira avançar.
 
 Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), cobrindo o fluxo completo do documento de requisitos (`docs/Infohub_InovAMF_Requisitos.md`) — cadastro do aluno, funil de 6 etapas, tarefas com upload de arquivo, lembretes por e-mail e dashboard — com autenticação e persistência real em Postgres via Prisma.
 
@@ -14,7 +14,7 @@ Sucesso para a Fase 1: um monolito rodando localmente (e com deploy simples), co
 - Comunicação via WhatsApp (v1 cobre apenas e-mail).
 - Agendamento/videochamada integrados para encontros com mentores.
 - Qualquer separação em microsserviços, filas externas (RabbitMQ/Kafka) ou múltiplos deploys — isso é trabalho de fases futuras da disciplina, não desta Fase 1.
-- Multi-tenancy (o sistema atende apenas a FAMF/InfoHub, uma instância única).
+- Multi-tenancy (o sistema atende apenas a AMF/InfoHub, uma instância única).
 - Aplicativo mobile nativo (apenas web responsivo, RNF-01).
 - Internacionalização (apenas português).
 

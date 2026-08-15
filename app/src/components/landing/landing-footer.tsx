@@ -1,14 +1,18 @@
-/** Rodapé institucional da landing — localização e instituições
- * fundadoras do InovAMF, pra dar credibilidade a quem chega sem
- * contexto nenhum sobre o programa. */
+import Image from "next/image";
+
+/** Rodapé institucional da landing — identidade do InfoHub, não do
+ * InovAMF: o InfoHub é o laboratório de empreendedorismo da própria
+ * Faculdade Antonio Meneghetti (AMF) que prepara alunos/equipes
+ * antes de encaminhá-los ao centro de inovação InovAMF (entidades
+ * distintas, ver docs/Infohub_InovAMF_Requisitos.md). */
 export function LandingFooter() {
   return (
     <footer className="border-t border-border bg-neutral-50 px-6 py-10 text-center">
-      <div className="mx-auto flex max-w-3xl flex-col gap-2">
-        <p className="text-sm font-medium">Antonio Meneghetti Faculdade & Fundação Antonio Meneghetti</p>
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-2">
+        <Image src="/logotipo.png" alt="InfoHub" width={28} height={28} className="h-7 w-7" />
+        <p className="text-sm font-medium">InfoHub — Faculdade Antonio Meneghetti (AMF)</p>
         <p className="text-sm text-muted-foreground">
-          Centro Internacional de Arte e Cultura Humanista Recanto Maestro — São João do Polêsine /
-          Restinga Sêca, RS
+          Laboratório de empreendedorismo que prepara alunos e equipes para o InovAMF.
         </p>
       </div>
     </footer>

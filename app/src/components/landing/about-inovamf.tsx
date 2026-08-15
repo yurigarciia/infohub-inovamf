@@ -12,7 +12,7 @@ export function AboutInovamf() {
       <p className="text-sm text-muted-foreground sm:text-base">
         O InovAMF é o ecossistema de inovação da Faculdade e da Fundação Antonio Meneghetti.
         Transforma ideias em negócios reais e sustentáveis, apoiando startups e projetos com
-        soluções para desafios sociais e tecnológicos — da mentoria à incubação, passando por
+        soluções para desafios sociais e tecnológicos: da mentoria à incubação, passando por
         parcerias entre a academia, o mercado e o setor público.
       </p>
     </div>
