@@ -13,22 +13,15 @@ interface NavItem {
   href: string;
 }
 
-/** Itens de navegação por papel (RNF-03: cada papel só vê o que é seu). */
+/** Itens de navegação por papel (RNF-03: cada papel só vê o que é seu).
+ * Admin/mentor não têm item aqui — a área deles ganhou uma sidebar
+ * própria (`components/admin/admin-sidebar.tsx`), já que acumulou
+ * páginas demais pra caber numa barra horizontal. */
 function navItemsForRole(role: UserRole | undefined): NavItem[] {
-  switch (role) {
-    case UserRole.ADMIN:
-      return [
-        { label: "Funil de equipes", href: "/admin" },
-        { label: "Dashboard", href: "/admin/dashboard" },
-        { label: "Auditoria", href: "/admin/auditoria" },
-      ];
-    case UserRole.MENTOR:
-      return [{ label: "Minhas equipes", href: "/admin" }];
-    case UserRole.STUDENT:
-      return [{ label: "Minhas tarefas", href: "/aluno" }];
-    default:
-      return [];
+  if (role === UserRole.STUDENT) {
+    return [{ label: "Minhas tarefas", href: "/aluno" }];
   }
+  return [];
 }
 
 export function AppShell({ children }: { children: ReactNode }) {

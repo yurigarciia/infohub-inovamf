@@ -79,7 +79,8 @@ Cobertura por papel, nesta ordem de prioridade (replica P0/P1 do `PLAN.md`):
 
 ### Fora desta etapa (mock não cobre)
 - Qualquer persistência real, autenticação real, envio de e-mail real, upload real de arquivo.
-- RF-03 (gestão de contas admin/mentor) pode ficar como tela simples de listagem mockada, prioridade baixa — não é P0/P1 no fluxo do aluno/admin do dia a dia.
+
+> RF-03 (gestão de contas admin/mentor) estava listada aqui como "fora desta etapa" originalmente, mas acabou implementada — ver T-FE-19.
 
 ## 4. Arquitetura da camada de dados mockados
 
@@ -275,6 +276,28 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 - **Acceptance Criteria:** Sem quebra de layout em 375px de largura nessas telas.
 - **Validation Steps:** DevTools em viewport mobile, checklist manual por tela.
 - **Notes:** Testado em 375px antes de mexer em qualquer CSS (medindo `scrollWidth` vs. `clientWidth`) em vez de adivinhar — achou overflow horizontal real (603px de conteúdo num viewport de 375px) em **todas** as páginas, com a mesma causa raiz: o `AppShell` (header compartilhado), não as páginas em si (`/login`, `/cadastro`, `/aluno` já empilhavam bem sozinhas). Corrigido: wordmark "InfoHub → InovAMF" vira só o ícone abaixo de `sm:` (texto só aparece em telas maiores); nav ganha `overflow-x-auto` em vez de forçar a largura; "Enviar minha ideia" vira "Inscrever-se" no mobile; `RoleSwitcher` esconde o label "Atalho de demonstração:" e o `<select>` fica com `w-28` (trunca o nome, mas a lista continua completa ao abrir) em vez de `w-auto`. Revalidado: `scrollWidth === clientWidth` (zero overflow) em `/`, `/login`, `/cadastro` (com um colega adicionado) e `/aluno` (lista e formulário de envio aberto); desktop conferido lado a lado pra garantir que nada regrediu. Sem erros de console.
+
+### Ticket: T-FE-18 Landing page + sidebar administrativa
+- **Priority:** P1
+- **Status:** Done
+- **Scope:** Reestruturação de navegação, pedida depois do T-FE-17: a `/` era um resto do style guide do T-FE-01, a navegação inteira vivia em botões soltos no header, e não havia "casa" pra funcionalidades administrativas crescerem.
+- **Acceptance Criteria:** `/` vira uma landing page de verdade (pública, com CTAs "Enviar minha ideia"/"Entrar" e o resumo das 6 etapas); área administrativa ganha uma sidebar fixa própria; header principal fica só com logo + sessão.
+- **Validation Steps:** Navegar deslogado pela landing; logar como admin e conferir a sidebar; logar como aluno e conferir que a home redireciona pra `/aluno`.
+- **Notes:** `app/page.tsx` reescrita como landing pública (hero com gradiente de marca, CTAs, `JourneySteps` — as 6 etapas buscadas via `getJourneyStages()`, não hardcoded); quem já tem sessão ativa é redirecionado automaticamente pro seu destino (`/aluno` ou `/admin`) via `useEffect` + `router.replace`. Novo `app/admin/layout.tsx` com `AdminSidebar` (sidebar fixa em desktop, vira barra horizontal com scroll em mobile) — a guarda de papel continua em cada página (a sidebar é só chrome, não fronteira de autorização, RNF-03). `AppShell`/header simplificado: nav de admin/mentor removida de lá (a sidebar assume), só o aluno mantém um link direto ("Minhas tarefas").
+
+  **Dois bugs reais encontrados e corrigidos durante a validação:** (1) o botão "Sair" nunca navegava pra lugar nenhum — quem saía de uma página restrita (ex.: `/admin/contas`) ficava preso vendo a mensagem de acesso negado; corrigido com `router.push("/")` depois do `signOut()`. (2) `Button` com `render={<Link/>}` (padrão Base UI) sem `nativeButton={false}` disparava um warning de acessibilidade no console (link renderizado sem semântica nativa de botão); corrigido nos dois CTAs da landing.
+
+  Validado com smoke test: landing → login → redireciona pro `/admin` corretamente; clicar no logo enquanto logado volta pro próprio painel (não mostra a landing de novo); logout leva de volta pra `/`; zero overflow mobile em `/`, `/admin` (sidebar) e `/admin/contas`. Sem erros de console.
+
+### Ticket: T-FE-19 Gestão de contas admin/mentor (RF-03)
+- **Priority:** P1
+- **Status:** Done
+- **Scope:** RF-03 tinha ficado de fora da Fase 1 (listada como baixa prioridade); aproveitando a reestruturação de navegação (T-FE-18), que abriu espaço na sidebar pra isso, foi implementada.
+- **Acceptance Criteria:** Admin consegue listar, criar, editar e desativar/reativar contas de administrador/mentor.
+- **Validation Steps:** Criar uma conta de mentor, editar, desativar, reativar; conferir que a própria conta logada não pode se autodesativar.
+- **Notes:** Novo `/admin/contas` (exclusivo `ADMIN` — mentor não gerencia outras contas), na sidebar do T-FE-18. `services/users.service.ts` ganhou `getStaffUsers`/`createStaffUser`/`updateStaffUser`/`setStaffUserActive`, cada mutação registrando auditoria (RNF-05: `STAFF_ACCOUNT_CREATED/UPDATED/DEACTIVATED/REACTIVATED`, novos rótulos em `/admin/auditoria`). Componentes `components/admin/{staff-form,staff-list}.tsx` seguem o mesmo padrão de edição inline já usado em tarefas (T-FE-12).
+
+  **Bug de self-lockout encontrado durante a validação** (não em produção — no meu próprio script de teste, um seletor errado desativou a conta admin logada em vez da conta de teste): confirmou que a UI não impedia um admin de desativar a própria conta, o que travaria o acesso dele até outro admin reativar. Corrigido em duas camadas: o botão "Desativar" fica desabilitado na própria linha (`isSelf && staffUser.isActive`), e `setStaffUserActive` no service rejeita a mesma operação mesmo se chamada diretamente (defesa em profundidade). Validado: botão desabilitado confirmado via teste automatizado: `self-deactivate disabled: true`.
 
 ## 6. Definition of Done (desta etapa)
 

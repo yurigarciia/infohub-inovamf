@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TEAM_MEMBER_ROLE_LABELS, USER_ROLE_LABELS } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { getStudentMemberRoleSummary } from "@/services";
@@ -12,8 +13,17 @@ import { TeamMemberRole, UserRole } from "@/types";
  * visíveis no AppShell, refletindo RNF-03.
  */
 export function RoleSwitcher() {
+  const router = useRouter();
   const { user, users, isLoading, setUserId, signOut } = useSession();
   const [studentRoles, setStudentRoles] = useState<Map<string, TeamMemberRole>>(new Map());
+
+  function handleSignOut() {
+    signOut();
+    // Sem isso, quem sai de uma página restrita (ex.: /admin/contas)
+    // ficava preso vendo a mensagem de acesso negado em vez de voltar
+    // pra landing page.
+    router.push("/");
+  }
 
   useEffect(() => {
     getStudentMemberRoleSummary().then(setStudentRoles);
@@ -57,7 +67,7 @@ export function RoleSwitcher() {
       {user && (
         <button
           type="button"
-          onClick={signOut}
+          onClick={handleSignOut}
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           Sair

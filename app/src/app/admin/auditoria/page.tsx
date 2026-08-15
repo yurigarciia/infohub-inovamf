@@ -12,6 +12,10 @@ const ACTION_LABELS: Record<string, string> = {
   SUBMISSION_APPROVED: "Entrega aprovada",
   SUBMISSION_REJECTED: "Entrega reprovada",
   EMAIL_SENT: "E-mail enviado",
+  STAFF_ACCOUNT_CREATED: "Conta criada",
+  STAFF_ACCOUNT_UPDATED: "Conta editada",
+  STAFF_ACCOUNT_DEACTIVATED: "Conta desativada",
+  STAFF_ACCOUNT_REACTIVATED: "Conta reativada",
 };
 
 function formatDateTime(date: Date): string {
