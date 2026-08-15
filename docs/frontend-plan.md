@@ -351,6 +351,8 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   **Bug encontrado e corrigido durante a validação (não relacionado ao vídeo):** o subtítulo do hero (`<p className="max-w-xl">`) ficava alinhado à esquerda em vez de centralizado sob o título, porque o container flex-column pai não tinha `items-center` — o `text-center` herdado centraliza o texto *dentro* da caixa do parágrafo, mas não centraliza a própria caixa (que fica mais estreita que o container por causa do `max-w-xl`) dentro do flex column, que teria a caixa esticada à esquerda por padrão (`align-items: stretch`). Esse bug já existia antes deste ticket, só ficou visualmente óbvio ao usuário nesta tela mais larga. Corrigido com `items-center` no container.
 
+  **Ajuste seguinte (mesmo ticket):** reintroduzido o ícone antigo (`logotipo.png`, sem o wordmark) acima do título do hero — pedido do usuário pra "ganhar mais espaço" visualmente na composição (o hero tinha ficado só com texto+CTAs depois da T-FE-23 remover o ícone duplicado). `alt=""` porque é decorativo — o header já tem a logo com `alt` acessível, evitando anúncio duplicado pra leitor de tela.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.
