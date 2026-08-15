@@ -64,21 +64,25 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-16">
-        <AboutInovamf />
-      </section>
-
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-16">
-        <div className="flex flex-col gap-1 text-center">
-          <h2 className="text-xl font-semibold">Como funciona a jornada</h2>
-          <p className="text-sm text-muted-foreground">
-            Seis etapas guiadas por mentores, da ideia inicial até a inscrição no InovAMF.
-          </p>
+      <section className="px-6 py-16">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+          <AboutInovamf />
         </div>
-        <JourneySteps />
       </section>
 
       <section className="bg-neutral-50 px-6 py-16">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+          <div className="flex flex-col gap-1 text-center">
+            <h2 className="text-xl font-semibold">Como funciona a jornada</h2>
+            <p className="text-sm text-muted-foreground">
+              Seis etapas guiadas por mentores, da ideia inicial até a inscrição no InovAMF.
+            </p>
+          </div>
+          <JourneySteps />
+        </div>
+      </section>
+
+      <section className="px-6 py-16">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
           <div className="flex flex-col gap-1 text-center">
             <h2 className="text-xl font-semibold">O que você ganha ao chegar ao InovAMF</h2>
