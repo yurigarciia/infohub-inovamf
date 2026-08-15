@@ -270,9 +270,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-17 Revisão de responsividade mobile-first
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** Passar as telas do aluno (login, tarefas, envio) e o formulário público por viewport mobile (RNF-01).
 - **Acceptance Criteria:** Sem quebra de layout em 375px de largura nessas telas.
 - **Validation Steps:** DevTools em viewport mobile, checklist manual por tela.
+- **Notes:** Testado em 375px antes de mexer em qualquer CSS (medindo `scrollWidth` vs. `clientWidth`) em vez de adivinhar — achou overflow horizontal real (603px de conteúdo num viewport de 375px) em **todas** as páginas, com a mesma causa raiz: o `AppShell` (header compartilhado), não as páginas em si (`/login`, `/cadastro`, `/aluno` já empilhavam bem sozinhas). Corrigido: wordmark "InfoHub → InovAMF" vira só o ícone abaixo de `sm:` (texto só aparece em telas maiores); nav ganha `overflow-x-auto` em vez de forçar a largura; "Enviar minha ideia" vira "Inscrever-se" no mobile; `RoleSwitcher` esconde o label "Atalho de demonstração:" e o `<select>` fica com `w-28` (trunca o nome, mas a lista continua completa ao abrir) em vez de `w-auto`. Revalidado: `scrollWidth === clientWidth` (zero overflow) em `/`, `/login`, `/cadastro` (com um colega adicionado) e `/aluno` (lista e formulário de envio aberto); desktop conferido lado a lado pra garantir que nada regrediu. Sem erros de console.
 
 ## 6. Definition of Done (desta etapa)
 

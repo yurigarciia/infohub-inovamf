@@ -24,13 +24,16 @@ export function RoleSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor="role-switcher" className="text-xs text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-2">
+      <label
+        htmlFor="role-switcher"
+        className="hidden shrink-0 text-xs text-muted-foreground sm:inline"
+      >
         Atalho de demonstração:
       </label>
       <select
         id="role-switcher"
-        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        className="h-9 w-28 min-w-0 rounded-md border border-input bg-background px-2 text-sm sm:w-auto"
         value={user?.id ?? ""}
         onChange={(e) => setUserId(e.target.value)}
       >

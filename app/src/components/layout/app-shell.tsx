@@ -45,23 +45,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-border bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
               <Image src="/logotipo.png" alt="InfoHub" width={32} height={32} />
-              <span className="text-sm font-semibold tracking-tight">
+              <span className="hidden text-sm font-semibold tracking-tight sm:inline">
                 InfoHub <span className="text-muted-foreground">→</span> InovAMF
               </span>
             </Link>
             {navItems.length > 0 && (
-              <nav className="flex items-center gap-1">
+              <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
                 {navItems.map((item) => {
                   const isActive = item.href === activeHref;
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                         isActive
                           ? "bg-brand-50 text-brand-700"
                           : "text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
@@ -74,18 +74,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               </nav>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {!user && (
               <>
                 <Link
                   href="/cadastro"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                  className="text-sm font-medium whitespace-nowrap text-muted-foreground hover:text-foreground"
                 >
-                  Enviar minha ideia
+                  <span className="sm:hidden">Inscrever-se</span>
+                  <span className="hidden sm:inline">Enviar minha ideia</span>
                 </Link>
                 <Link
                   href="/login"
-                  className="text-sm font-medium text-brand-700 hover:text-brand-800"
+                  className="text-sm font-medium whitespace-nowrap text-brand-700 hover:text-brand-800"
                 >
                   Entrar
                 </Link>
