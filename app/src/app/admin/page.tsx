@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,7 +18,8 @@ import {
   getMentors,
   getTeamsByStage,
 } from "@/services";
-import { TASK_STATUS_LABELS } from "@/lib/labels";
+import { downloadTextFile, toCsv } from "@/lib/csv";
+import { IDEA_MATURITY_LABELS, TASK_STATUS_LABELS } from "@/lib/labels";
 import { TaskStatus, TeamMemberRole } from "@/types";
 import type { IdeaArea, JourneyStage, TeamBoardItem, TeamFilters, User } from "@/types";
 
@@ -78,13 +80,53 @@ export default function AdminHomePage() {
     teamsByStage.set(team.currentStageId, list);
   }
 
+  function handleExportCsv() {
+    const headers = [
+      "Nome da ideia",
+      "Área",
+      "Etapa atual",
+      "Turma",
+      "Estágio da ideia",
+      "Pronta para o InovAMF",
+      "Líder",
+      "E-mail do líder",
+      "Integrantes",
+    ];
+    const rows = teams.map((team) => {
+      const leader = team.members.find((m) => m.memberRole === TeamMemberRole.LEADER);
+      const others = team.members
+        .filter((m) => m.memberRole !== TeamMemberRole.LEADER)
+        .map((m) => m.user.name)
+        .join("; ");
+      return {
+        "Nome da ideia": team.ideaName,
+        Área: team.area?.name ?? "",
+        "Etapa atual": team.currentStage.name,
+        Turma: team.cohort,
+        "Estágio da ideia": IDEA_MATURITY_LABELS[team.ideaMaturity],
+        "Pronta para o InovAMF": team.isReadyForInovamf ? "Sim" : "Não",
+        Líder: leader?.user.name ?? "",
+        "E-mail do líder": leader?.user.email ?? "",
+        Integrantes: others,
+      };
+    });
+    const csv = toCsv(rows, headers);
+    const today = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`infohub-equipes-${today}.csv`, csv);
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6 px-6 py-8">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Funil de equipes</h1>
-        <p className="text-sm text-muted-foreground">
-          {isLoading ? "Carregando…" : `${teams.length} equipe(s) encontrada(s)`}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold">Funil de equipes</h1>
+          <p className="text-sm text-muted-foreground">
+            {isLoading ? "Carregando…" : `${teams.length} equipe(s) encontrada(s)`}
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" disabled={teams.length === 0} onClick={handleExportCsv}>
+          Exportar CSV
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

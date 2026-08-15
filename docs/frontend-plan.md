@@ -254,9 +254,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-15 Exportação CSV (client-side)
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** Botão que gera e baixa um CSV a partir dos dados mockados filtrados em tela (RF-23), sem chamada de API.
 - **Acceptance Criteria:** Arquivo baixado abre corretamente e reflete os filtros aplicados no painel.
 - **Validation Steps:** Aplicar filtro, exportar, abrir CSV e conferir linhas.
+- **Notes:** Novo `lib/csv.ts` (`toCsv` — serializa com escaping de vírgula/aspas/quebra de linha; `downloadTextFile` — Blob + `<a download>`, sem chamada de rede). Botão "Exportar CSV" em `/admin` ao lado do título, desabilitado quando não há equipes. Exporta exatamente o array `teams` já filtrado em tela (nome, área, etapa, turma, estágio da ideia, pronta para InovAMF, líder + e-mail, demais integrantes). Validado interceptando o evento de download do Playwright: filtrar por área "Sustentabilidade" e exportar gera um CSV com exatamente as 2 linhas esperadas (EcoRota, AgroSmart) e todas as colunas corretas. Sem erros de console.
 
 ### Ticket: T-FE-16 Filtro por período/turma (cohort)
 - **Priority:** P1
