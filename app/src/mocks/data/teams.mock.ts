@@ -9,6 +9,8 @@ import { CURRENT_COHORT } from "@/lib/constants";
 import { daysFromNow } from "../utils";
 
 const COHORT = CURRENT_COHORT;
+/** Turma de um ciclo anterior — usado pelo filtro por período (RF-24, T-FE-16). */
+const PREVIOUS_COHORT = "2026.1";
 
 export const MOCK_TEAMS: Team[] = [
   {
@@ -95,6 +97,22 @@ export const MOCK_TEAMS: Team[] = [
     createdAt: daysFromNow(-90),
     updatedAt: daysFromNow(-1),
   },
+  {
+    // Turma anterior (2026.1), ciclo já encerrado — usado pelo filtro
+    // por período (RF-24, T-FE-16).
+    id: "team-7",
+    ideaName: "EcoVerde",
+    ideaDescription:
+      "Marketplace de compostagem compartilhada entre condomínios e hortas comunitárias.",
+    areaId: 4, // Sustentabilidade
+    ideaMaturity: IdeaMaturity.MVP_READY,
+    sourceOrigin: "Feira de profissões da faculdade",
+    cohort: PREVIOUS_COHORT,
+    currentStageId: 6,
+    isReadyForInovamf: true,
+    createdAt: daysFromNow(-260),
+    updatedAt: daysFromNow(-180),
+  },
 ];
 
 export const MOCK_TEAM_MEMBERS: TeamMember[] = [
@@ -116,6 +134,8 @@ export const MOCK_TEAM_MEMBERS: TeamMember[] = [
   // team-6 — Thiago é líder; Beatriz (já em team-2) entra como integrante aqui também (Q4).
   { id: "tm-11", teamId: "team-6", userId: "user-student-11", memberRole: TeamMemberRole.LEADER, joinedAt: daysFromNow(-90) },
   { id: "tm-12", teamId: "team-6", userId: "user-student-4", memberRole: TeamMemberRole.MEMBER, joinedAt: daysFromNow(-80) },
+  // team-7 (turma anterior)
+  { id: "tm-13", teamId: "team-7", userId: "user-student-12", memberRole: TeamMemberRole.LEADER, joinedAt: daysFromNow(-260) },
 ];
 
 export const MOCK_TEAM_MENTORS: TeamMentor[] = [
@@ -127,6 +147,7 @@ export const MOCK_TEAM_MENTORS: TeamMentor[] = [
   { id: "tmt-5", teamId: "team-4", mentorId: "user-mentor-2", assignedAt: daysFromNow(-54) },
   { id: "tmt-6", teamId: "team-5", mentorId: "user-mentor-2", assignedAt: daysFromNow(-69) },
   { id: "tmt-7", teamId: "team-6", mentorId: "user-mentor-2", assignedAt: daysFromNow(-89) },
+  { id: "tmt-8", teamId: "team-7", mentorId: "user-mentor-1", assignedAt: daysFromNow(-259) },
 ];
 
 export const MOCK_TEAM_STAGE_HISTORY: TeamStageHistory[] = [
@@ -157,6 +178,8 @@ export const MOCK_TEAM_STAGE_HISTORY: TeamStageHistory[] = [
   { id: "tsh-19", teamId: "team-6", stageId: 4, enteredAt: daysFromNow(-60), exitedAt: daysFromNow(-45), changedById: "user-mentor-2" },
   { id: "tsh-20", teamId: "team-6", stageId: 5, enteredAt: daysFromNow(-45), exitedAt: daysFromNow(-20), changedById: "user-mentor-2" },
   { id: "tsh-21", teamId: "team-6", stageId: 6, enteredAt: daysFromNow(-20), exitedAt: null, changedById: "user-mentor-2" },
+  // team-7 (turma anterior) — ciclo já encerrado, direto na etapa 6.
+  { id: "tsh-22", teamId: "team-7", stageId: 6, enteredAt: daysFromNow(-260), exitedAt: null, changedById: "user-mentor-1" },
 ];
 
 /** Anotações internas do mentor/admin (RF-10) — não visíveis ao aluno na UI. */

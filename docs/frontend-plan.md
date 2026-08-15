@@ -262,9 +262,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-16 Filtro por período/turma (cohort)
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** Seletor de `cohort` no painel do admin (RF-24), usando os valores presentes nos dados mockados.
 - **Acceptance Criteria:** Selecionar um cohort filtra o funil só para aquele período.
 - **Validation Steps:** Teste manual trocando cohort.
+- **Notes:** Até este ticket todos os mocks compartilhavam a mesma turma (`CURRENT_COHORT`, "2026.2"), então o filtro não tinha o que filtrar de verdade — adicionada uma 7ª equipe (`team-7`, "EcoVerde") na turma anterior ("2026.1", constante `PREVIOUS_COHORT`), com usuário, membro, mentor e histórico de etapa próprios, para o filtro ser demonstrável. Nova `getCohorts()` em `teams.service.ts` deriva os valores distintos direto de `MOCK_TEAMS` (mais recente primeiro), populando o novo `FilterSelect` "Turma" em `/admin`, que já combina em AND com os demais filtros (T-FE-08) e é usado pela exportação CSV (T-FE-15) sem nenhuma mudança adicional, já que ambos leem o mesmo estado `teams` filtrado. Validado com screenshot: sem filtro mostra as 7 equipes; selecionar "2026.1" isola exatamente a EcoVerde ("1 equipe(s) encontrada(s)"). Sem erros de console.
 
 ### Ticket: T-FE-17 Revisão de responsividade mobile-first
 - **Priority:** P1

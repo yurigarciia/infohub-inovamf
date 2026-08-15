@@ -161,6 +161,18 @@ export const MOCK_USERS: User[] = [
     createdAt: daysFromNow(-90),
     updatedAt: daysFromNow(-90),
   },
+  {
+    // Turma anterior (2026.1) — usado pelo filtro por período (RF-24, T-FE-16).
+    id: "user-student-12",
+    name: "Vitória Campos",
+    email: "vitoria.campos@acad.famf.br",
+    phone: "(55) 98888-0012",
+    role: UserRole.STUDENT,
+    isActive: true,
+    lgpdConsentedAt: daysFromNow(-200),
+    createdAt: daysFromNow(-200),
+    updatedAt: daysFromNow(-200),
+  },
 ];
 
 /** Só existe para users com role = STUDENT (ver decisoes.md). */
@@ -177,4 +189,5 @@ export const MOCK_STUDENT_PROFILES: StudentProfile[] = [
   { userId: "user-student-9", course: "Sistemas de Informação", period: "3º período" },
   { userId: "user-student-10", course: "Engenharia de Software", period: "6º período" },
   { userId: "user-student-11", course: "Sistemas de Informação", period: "4º período" },
+  { userId: "user-student-12", course: "Administração", period: "8º período" },
 ];

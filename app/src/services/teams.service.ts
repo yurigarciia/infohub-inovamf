@@ -37,6 +37,13 @@ export async function getIdeaAreas(): Promise<IdeaArea[]> {
   return [...MOCK_IDEA_AREAS];
 }
 
+/** Turmas/semestres com pelo menos uma equipe — para o filtro por
+ * período (RF-24). Ordenado do mais recente para o mais antigo. */
+export async function getCohorts(): Promise<string[]> {
+  await delay();
+  return [...new Set(MOCK_TEAMS.map((t) => t.cohort))].sort((a, b) => b.localeCompare(a));
+}
+
 /** Para cada aluno com pelo menos uma equipe, indica se ele é líder em
  * alguma delas ou só integrante em todas — usado hoje pelo seletor de
  * "papel ativo" (T-FE-05) pra rotular a conta de demonstração (Q1: a

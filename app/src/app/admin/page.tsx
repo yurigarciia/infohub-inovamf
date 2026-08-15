@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  getCohorts,
   getIdeaAreas,
   getJourneyStages,
   getMentors,
@@ -30,6 +31,7 @@ export default function AdminHomePage() {
   const [stages, setStages] = useState<JourneyStage[]>([]);
   const [areas, setAreas] = useState<IdeaArea[]>([]);
   const [mentors, setMentors] = useState<User[]>([]);
+  const [cohorts, setCohorts] = useState<string[]>([]);
   const [teams, setTeams] = useState<TeamBoardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,13 +40,15 @@ export default function AdminHomePage() {
   const [areaId, setAreaId] = useState<string>(ALL_VALUE);
   const [taskStatus, setTaskStatus] = useState<string>(ALL_VALUE);
   const [mentorId, setMentorId] = useState<string>(ALL_VALUE);
+  const [cohort, setCohort] = useState<string>(ALL_VALUE);
 
   useEffect(() => {
-    Promise.all([getJourneyStages(), getIdeaAreas(), getMentors()]).then(
-      ([loadedStages, loadedAreas, loadedMentors]) => {
+    Promise.all([getJourneyStages(), getIdeaAreas(), getMentors(), getCohorts()]).then(
+      ([loadedStages, loadedAreas, loadedMentors, loadedCohorts]) => {
         setStages(loadedStages);
         setAreas(loadedAreas);
         setMentors(loadedMentors);
+        setCohorts(loadedCohorts);
       },
     );
   }, []);
@@ -56,6 +60,7 @@ export default function AdminHomePage() {
     if (areaId !== ALL_VALUE) filters.areaId = Number(areaId);
     if (taskStatus !== ALL_VALUE) filters.taskStatus = taskStatus as TaskStatus;
     if (mentorId !== ALL_VALUE) filters.mentorId = mentorId;
+    if (cohort !== ALL_VALUE) filters.cohort = cohort;
 
     let cancelled = false;
     // setIsLoading(true) fica dentro do .then (não direto no corpo do
@@ -71,7 +76,7 @@ export default function AdminHomePage() {
     return () => {
       cancelled = true;
     };
-  }, [search, course, areaId, taskStatus, mentorId]);
+  }, [search, course, areaId, taskStatus, mentorId, cohort]);
 
   const teamsByStage = new Map<number, TeamBoardItem[]>();
   for (const team of teams) {
@@ -177,6 +182,13 @@ export default function AdminHomePage() {
           onChange={setMentorId}
           placeholder="Todos"
           options={mentors.map((mentor) => ({ value: mentor.id, label: mentor.name }))}
+        />
+        <FilterSelect
+          label="Turma"
+          value={cohort}
+          onChange={setCohort}
+          placeholder="Todas"
+          options={cohorts.map((c) => ({ value: c, label: c }))}
         />
       </div>
 
