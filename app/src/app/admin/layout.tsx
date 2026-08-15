@@ -8,7 +8,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <AdminSidebar />
-      <div className="flex flex-1 flex-col overflow-x-hidden">{children}</div>
+      <div className="flex flex-1 flex-col overflow-x-hidden bg-neutral-50">{children}</div>
     </div>
   );
 }

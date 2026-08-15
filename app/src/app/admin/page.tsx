@@ -126,9 +126,9 @@ export default function AdminHomePage() {
           const stageTeams = teamsByStage.get(stage.id) ?? [];
           return (
             <div key={stage.id} className="flex w-72 shrink-0 flex-col gap-3">
-              <div className="flex items-center justify-between rounded-md bg-neutral-100 px-3 py-2">
-                <span className="text-sm font-semibold">{stage.name}</span>
-                <Badge variant="secondary">{stageTeams.length}</Badge>
+              <div className="flex items-center justify-between rounded-md bg-brand-800 px-3 py-2">
+                <span className="text-sm font-semibold text-white">{stage.name}</span>
+                <Badge className="bg-brand-600 text-white">{stageTeams.length}</Badge>
               </div>
               <div className="flex flex-col gap-3">
                 {stageTeams.map((team) => (

@@ -22,7 +22,7 @@ export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-border bg-neutral-50 px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">
+    <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-brand-800 bg-brand-900 px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">
       {items.map((item) => {
         const isActive = item.href === activeHref;
         return (
@@ -31,8 +31,8 @@ export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
             href={item.href}
             className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
               isActive
-                ? "bg-brand-50 text-brand-700"
-                : "text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
+                ? "bg-brand-600 text-white"
+                : "text-brand-100/80 hover:bg-brand-800 hover:text-white"
             }`}
           >
             {item.label}
