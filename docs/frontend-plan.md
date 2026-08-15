@@ -220,9 +220,13 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-11 Aprovação/reprovação + histórico de versões
 - **Priority:** P0
+- **Status:** Done
 - **Scope:** Ação de aprovar/reprovar na página de detalhe da tarefa; reprovação reabre a tarefa com comentário; reenvio gera nova versão, mantendo a anterior visível no histórico.
 - **Acceptance Criteria:** Fluxo completo reprovar → aluno reenvia → nova versão aparece, versão antiga preservada.
 - **Validation Steps:** Teste manual do fluxo completo alternando papéis.
+- **Notes:** Sem rota própria de "detalhe da tarefa" — os botões Aprovar/Reprovar ficam inline no card da tarefa dentro de `/admin/equipes/[teamId]` (T-FE-09), que já reúne todo o contexto necessário (título, descrição, prazo, histórico de versões). Só aparecem para `isStaff` quando a entrega atual (`isCurrent`) está `PENDING`; reprovar exige comentário (usa `reviewSubmission` de T-FE-04). Validado com smoke test de ponta a ponta: reprovar a v2 do AgroSmart com comentário → Thiago (líder) reenvia pelo `/aluno` → volta pro admin e as 3 versões aparecem (v1 Reprovada, v2 Reprovada, v3 Em análise), com os botões de revisão reaparecendo pra v3. Sem erros de console.
+
+  **Gotcha descoberto durante o teste**: os mocks vivem só em memória do lado do navegador — uma navegação de página inteira (`location.href`/refresh, não um `<Link>` do Next.js) reseta todo o estado mockado de volta ao dataset inicial. Isso é esperado nesta fase (T-FE-04 já previa isso: "não persiste entre reloads") e não afeta o uso real do app (a navegação normal por `<Link>`/`router.push` nunca recarrega a página), mas é importante lembrar ao escrever testes/scripts de verificação: sempre navegar clicando em links, nunca com `page.goto()` para rotas internas depois do primeiro carregamento.
 
 ### Ticket: T-FE-12 CRUD de tarefas + templates por etapa
 - **Priority:** P1
