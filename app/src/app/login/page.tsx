@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/lib/session";
 import { authenticateByEmail } from "@/services";
 import { UserRole } from "@/types";
+import { DemoProfilePicker } from "./demo-profile-picker";
 
 /** RF-01: login (mock) com e-mail e senha, com opção de recuperação de
  * senha. Nesta fase a senha não é verificada de fato — só a existência
@@ -23,6 +24,11 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
 
+  async function goToUserArea(user: { id: string; role: UserRole }) {
+    await setUserId(user.id);
+    router.push(user.role === UserRole.STUDENT ? "/aluno" : "/admin");
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -33,8 +39,7 @@ export default function LoginPage() {
         setError("E-mail ou senha inválidos.");
         return;
       }
-      await setUserId(user.id);
-      router.push(user.role === UserRole.STUDENT ? "/aluno" : "/admin");
+      await goToUserArea(user);
     } finally {
       setIsSubmitting(false);
     }
@@ -99,6 +104,8 @@ export default function LoginPage() {
               </p>
             )}
           </form>
+
+          <DemoProfilePicker onPick={goToUserArea} />
         </CardContent>
       </Card>
     </div>

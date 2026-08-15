@@ -313,6 +313,14 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   Validado com Playwright: aluno com 1 equipe (João Pedro Alves) — clicar em "Minhas equipes" já cai direto em `/equipes/team-1`, mostrando dados cadastrais/integrantes/mentores/tarefas da própria equipe, sem os cards exclusivos de staff. Aluno com 2 equipes (Beatriz Fernandes, Q4) — `/aluno/equipes` mostra as 2 equipes (SaúdeConecta, AgroSmart) sem redirect automático; clicar em um card leva à equipe certa. Admin (Ana Beatriz Souza) — kanban em `/admin` continua funcionando, card leva a `/equipes/team-1` com "← Voltar ao funil". Zero overflow em 375px em `/aluno` e `/aluno/equipes`. Sem erros de console em nenhum fluxo.
 
+### Ticket: T-FE-21 Polimento de header e cursor global
+- **Priority:** P2
+- **Status:** Done
+- **Scope:** Três ajustes de refinamento pedidos após o T-FE-20: (1) tirar o select "Atalho de demonstração" do header global e movê-lo para `/login`; (2) `cursor: pointer` em tudo que é clicável; (3) header da landing com CTAs que realmente parecem botões.
+- **Acceptance Criteria:** Header só mostra "Sair" quando há sessão ativa; `/login` ganha um seletor de perfis mockados abaixo do formulário real; elementos clicáveis (links, botões, select, itens de menu/aba) mostram cursor de mão; CTAs do header usam o componente `Button`.
+- **Validation Steps:** Conferir header deslogado (landing/login/cadastro) e logado (aluno/admin); testar o seletor de demonstração em `/login`; inspecionar `cursor` computado num link; checar 375px sem overflow.
+- **Notes:** `role-switcher.tsx` reduzido a só o botão "Sair" (RF-01) — o `<select>` de perfis foi extraído para `app/login/demo-profile-picker.tsx`, reaproveitando `getStudentMemberRoleSummary`/`useSession().users` que já existiam. `app-shell.tsx` passou a renderizar "Enviar minha ideia"/"Entrar" como `Button` (`outline`/`default`) em vez de texto sublinhado — mesmo padrão já usado no hero da landing (T-FE-18), então praticamente elimina a duplicação visual. Regra global em `globals.css` (`@layer base`) aplica `cursor: pointer` a `button:not(:disabled)`, `a[href]`, `select`, `[role="button"]`, `[role="menuitem"]`, `[role="tab"]` e `label[for]` — cobre também os componentes Base UI (que já usam esses roles) sem precisar tocar em cada um. Validado com Playwright: `/login` mostra o formulário real + o atalho de demonstração separado por divisor; selecionar um perfil no atalho loga e navega corretamente (`/aluno` ou `/admin`); área logada mostra só "Sair" no header; `cursor: pointer` confirmado computado num link da sidebar; zero overflow em 375px em `/` e `/login`. Sem erros de console.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.

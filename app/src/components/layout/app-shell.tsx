@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/session";
 import { RoleSwitcher } from "./role-switcher";
 
@@ -27,19 +28,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {!user && (
               <>
-                <Link
-                  href="/cadastro"
-                  className="text-sm font-medium whitespace-nowrap text-muted-foreground hover:text-foreground"
-                >
+                <Button variant="outline" size="sm" render={<Link href="/cadastro" />} nativeButton={false}>
                   <span className="sm:hidden">Inscrever-se</span>
                   <span className="hidden sm:inline">Enviar minha ideia</span>
-                </Link>
-                <Link
-                  href="/login"
-                  className="text-sm font-medium whitespace-nowrap text-brand-700 hover:text-brand-800"
-                >
+                </Button>
+                <Button size="sm" render={<Link href="/login" />} nativeButton={false}>
                   Entrar
-                </Link>
+                </Button>
               </>
             )}
             <RoleSwitcher />
