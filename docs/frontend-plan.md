@@ -299,6 +299,20 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   **Bug de self-lockout encontrado durante a validação** (não em produção — no meu próprio script de teste, um seletor errado desativou a conta admin logada em vez da conta de teste): confirmou que a UI não impedia um admin de desativar a própria conta, o que travaria o acesso dele até outro admin reativar. Corrigido em duas camadas: o botão "Desativar" fica desabilitado na própria linha (`isSelf && staffUser.isActive`), e `setStaffUserActive` no service rejeita a mesma operação mesmo se chamada diretamente (defesa em profundidade). Validado: botão desabilitado confirmado via teste automatizado: `self-deactivate disabled: true`.
 
+### Ticket: T-FE-20 Área do aluno com sidebar própria
+- **Priority:** P1
+- **Status:** Done
+- **Scope:** Pedido depois do T-FE-18/T-FE-19: a área administrativa ganhou sidebar e navegação de verdade, mas a área do aluno continuou igual a antes (só o link "Minhas tarefas" solto no header). Objetivo: espelhar a estrutura do painel administrativo — sidebar com opções, incluindo acesso às informações da própria equipe.
+- **Acceptance Criteria:** `/aluno` ganha sidebar própria ("Minhas tarefas" / "Minhas equipes"); aluno consegue ver os dados da(s) equipe(s) da qual participa (dados cadastrais, integrantes, mentores, histórico de etapas, tarefas), sem os controles exclusivos de admin/mentor (avançar etapa, notas internas).
+- **Validation Steps:** Logar como aluno com 1 equipe (auto-redirect direto pro detalhe) e como aluno com 2+ equipes (Q4 — lista intermediária); conferir card de equipe leva à página de detalhe certa; conferir que o admin continua acessando a mesma página de detalhe a partir do kanban; checar 375px sem overflow.
+- **Notes:** Extraído `components/layout/sidebar-nav.tsx` (componente genérico, chrome compartilhado entre desktop fixo/mobile scroll horizontal) reusado tanto por `admin-sidebar.tsx` quanto pelo novo `components/aluno/aluno-sidebar.tsx`. Novo `app/aluno/layout.tsx` monta a sidebar do aluno; `app-shell.tsx` simplificado (removida a lógica antiga de nav por papel no header, já que as duas áreas passaram a ter sidebar própria).
+
+  A página de detalhe da equipe (RF-08/09/10) vivia em `/admin/equipes/[teamId]`, mas nunca foi exclusiva do admin — mentores e agora também alunos membros precisam acessá-la. Movida para a rota neutra `/equipes/[teamId]` (junto com `team-board-card.tsx`, de `components/admin/` pra `components/teams/`); a guarda de acesso dentro de `TeamDetailView` (staff OU membro da equipe, senão nega) continua sendo a fronteira real (RNF-03) — a rota em si não é a proteção. O link "← Voltar" ficou role-aware: "Voltar ao funil" (`/admin`) pra staff, "Voltar às minhas equipes" (`/aluno/equipes`) pro aluno.
+
+  Nova `getTeamsForStudent()` em `teams.service.ts` e `app/aluno/equipes/page.tsx`: lista as equipes do aluno (Q4 — um aluno pode integrar mais de uma) via `team_members`; com exatamente 1 equipe, pula direto pro detalhe (`router.replace`) em vez de mostrar uma lista de um item só.
+
+  Validado com Playwright: aluno com 1 equipe (João Pedro Alves) — clicar em "Minhas equipes" já cai direto em `/equipes/team-1`, mostrando dados cadastrais/integrantes/mentores/tarefas da própria equipe, sem os cards exclusivos de staff. Aluno com 2 equipes (Beatriz Fernandes, Q4) — `/aluno/equipes` mostra as 2 equipes (SaúdeConecta, AgroSmart) sem redirect automático; clicar em um card leva à equipe certa. Admin (Ana Beatriz Souza) — kanban em `/admin` continua funcionando, card leva a `/equipes/team-1` com "← Voltar ao funil". Zero overflow em 375px em `/aluno` e `/aluno/equipes`. Sem erros de console em nenhum fluxo.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.

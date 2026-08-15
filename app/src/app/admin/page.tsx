@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ALL_VALUE } from "@/components/filters/filter-select";
 import { ExportTeamsCsvButton } from "@/components/admin/export-teams-csv-button";
-import { TeamBoardCard } from "@/components/admin/team-board-card";
+import { TeamBoardCard } from "@/components/teams/team-board-card";
 import { TeamFiltersBar } from "@/components/admin/team-filters-bar";
 import {
   getCohorts,

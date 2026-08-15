@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { TeamMemberRole } from "@/types";
 import type { TeamBoardItem } from "@/types";
 
-/** Card de uma equipe numa coluna do kanban (RF-06). */
+/** Card de preview de uma equipe (nome, área, integrantes) — usado no
+ * kanban do admin (RF-06) e na lista "Minhas equipes" do aluno. */
 export function TeamBoardCard({ team }: { team: TeamBoardItem }) {
   return (
     <Link
-      href={`/admin/equipes/${team.id}`}
+      href={`/equipes/${team.id}`}
       className="block rounded-lg border border-border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="mb-1 flex items-start justify-between gap-2">

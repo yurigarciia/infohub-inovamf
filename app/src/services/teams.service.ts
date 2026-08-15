@@ -124,6 +124,16 @@ export async function getTeamsByStage(filters: TeamFilters = {}): Promise<TeamBo
   return teams.map(toBoardItem);
 }
 
+/** Área do aluno — lista das equipes que ele integra (um aluno pode
+ * participar de mais de uma, Q4). */
+export async function getTeamsForStudent(userId: string): Promise<TeamBoardItem[]> {
+  await delay();
+  const teamIds = new Set(
+    MOCK_TEAM_MEMBERS.filter((m) => m.userId === userId).map((m) => m.teamId),
+  );
+  return MOCK_TEAMS.filter((t) => teamIds.has(t.id)).map(toBoardItem);
+}
+
 /** Página de detalhe da equipe (RF-08). */
 export async function getTeamDetail(teamId: string): Promise<TeamDetail> {
   await delay();
