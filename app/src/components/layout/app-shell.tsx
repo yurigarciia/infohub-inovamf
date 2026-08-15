@@ -17,7 +17,10 @@ interface NavItem {
 function navItemsForRole(role: UserRole | undefined): NavItem[] {
   switch (role) {
     case UserRole.ADMIN:
-      return [{ label: "Funil de equipes", href: "/admin" }];
+      return [
+        { label: "Funil de equipes", href: "/admin" },
+        { label: "Dashboard", href: "/admin/dashboard" },
+      ];
     case UserRole.MENTOR:
       return [{ label: "Minhas equipes", href: "/admin" }];
     case UserRole.STUDENT:
@@ -31,6 +34,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const pathname = usePathname();
   const navItems = navItemsForRole(user?.role);
+
+  // Item ativo = o de href mais específico que casa com a rota atual
+  // (evita "Funil de equipes" e "Dashboard" ficarem ativos ao mesmo
+  // tempo, já que /admin/dashboard também começa com /admin).
+  const activeHref = navItems
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -46,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {navItems.length > 0 && (
               <nav className="flex items-center gap-1">
                 {navItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const isActive = item.href === activeHref;
                   return (
                     <Link
                       key={item.href}

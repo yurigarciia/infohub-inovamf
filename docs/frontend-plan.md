@@ -246,9 +246,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-14 Dashboard com indicadores
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** Cards de KPI (RF-22) usando os dados mockados.
 - **Acceptance Criteria:** Números batem com a contagem real dos dados mockados carregados.
 - **Validation Steps:** Conferir manualmente contagem exibida vs. array mockado.
+- **Notes:** `/admin/dashboard`, nova `services/reports.service.ts` (`getDashboardStats`, já aceita `cohort` opcional para reuso no T-FE-16), novo `types/reports.ts`. Exclusivo do papel `ADMIN` (RF-22 é "para a coordenação"; mentor não vê). 3 stat tiles (equipes ativas, tarefas atrasadas, prontas para o InovAMF) + distribuição por etapa como barras horizontais usando a mesma escala de marca (`brand-300`→`brand-800`) já usada nos badges de etapa — carreguei a skill `dataviz` antes de construir, já que é um dashboard com stat tiles + uma visualização de magnitude por categoria; como é encoding sequencial de hue único (não categórico multi-série), não precisou rodar o validador de paleta categórica. Cada barra já vem com o rótulo do valor sempre visível (sem depender de hover). Também corrigi um bug de destaque duplo na navegação: como "/admin/dashboard" começa com "/admin", tanto "Funil de equipes" quanto "Dashboard" ficavam marcados como ativos ao mesmo tempo — corrigido escolhendo sempre o item de href mais específico. Validado com screenshot: 6 equipes ativas, 1 tarefa atrasada, 1 pronta para o InovAMF, 1 equipe por etapa — tudo batendo com os mocks. Sem erros de console.
 
 ### Ticket: T-FE-15 Exportação CSV (client-side)
 - **Priority:** P1
