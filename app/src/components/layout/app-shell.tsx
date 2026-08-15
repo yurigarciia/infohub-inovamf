@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header
-        className="shrink-0 overflow-visible"
+        className="relative z-20 shrink-0 overflow-visible shadow-md"
         style={{ background: "linear-gradient(135deg, #4A0E1A 0%, #D62027 55%, #F7941D 100%)" }}
       >
         <div className="relative mx-auto flex max-w-6xl items-center justify-end gap-4 px-4 py-3 sm:px-6">

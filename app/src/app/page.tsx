@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { HeroBackgroundVideo } from "@/components/landing/hero-background-video";
 import { JourneySteps } from "@/components/landing/journey-steps";
 import { useSession } from "@/lib/session";
 import { UserRole } from "@/types";
@@ -26,13 +27,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <section
-        className="flex flex-col items-center gap-6 px-6 py-20 text-center text-white"
-        style={{
-          background: "linear-gradient(135deg, #4A0E1A 0%, #D62027 55%, #F7941D 100%)",
-        }}
-      >
-        <div className="flex flex-col gap-2">
+      <section className="relative flex flex-col items-center gap-6 overflow-hidden px-6 py-20 text-center text-white">
+        <HeroBackgroundVideo />
+        <div className="relative flex flex-col items-center gap-2">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Do esboço de uma ideia à inscrição no InovAMF
           </h1>
