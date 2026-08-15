@@ -29,7 +29,7 @@ export function RoleSwitcher() {
     <button
       type="button"
       onClick={handleSignOut}
-      className="text-sm font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      className="text-sm font-medium text-white/90 underline underline-offset-2 hover:text-white"
     >
       Sair
     </button>

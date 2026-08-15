@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -33,14 +32,13 @@ export default function Home() {
           background: "linear-gradient(135deg, #4A0E1A 0%, #D62027 55%, #F7941D 100%)",
         }}
       >
-        <Image src="/logotipo.png" alt="InfoHub" width={72} height={72} />
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            InfoHub → InovAMF
+            Do esboço de uma ideia à inscrição no InovAMF
           </h1>
           <p className="max-w-xl text-sm text-white/90 sm:text-base">
-            Do esboço de uma ideia até a inscrição no InovAMF: acompanhe cada etapa da jornada da
-            sua equipe no laboratório de inovação da Faculdade Antonio Meneghetti.
+            Acompanhe cada etapa da jornada da sua equipe no laboratório de inovação da Faculdade
+            Antonio Meneghetti.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
