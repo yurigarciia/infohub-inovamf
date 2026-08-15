@@ -18,18 +18,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header
-        className="shrink-0"
+        className="shrink-0 overflow-visible"
         style={{ background: "linear-gradient(135deg, #4A0E1A 0%, #D62027 55%, #F7941D 100%)" }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center">
+        <div className="relative mx-auto flex max-w-6xl items-center justify-end gap-4 px-4 py-3 sm:px-6">
+          {/* A logo fica fora do fluxo (ver acima do header) — posicionada
+              com o mesmo inset (left-4/6) do padding do container, pra
+              alinhar com a mesma margem que os botões respeitam à direita. */}
+          <Link href="/" className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center sm:left-6">
             <Image
               src="/logo-branca.png"
               alt="InfoHub"
               width={1024}
               height={1024}
               priority
-              className="h-8 w-8 sm:h-9 sm:w-9"
+              className="h-24 w-24 sm:h-28 sm:w-28"
             />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">

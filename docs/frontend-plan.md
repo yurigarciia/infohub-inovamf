@@ -339,6 +339,8 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   **Correção durante a validação:** o primeiro recorte do ícone cortou o topo do ícone (margem insuficiente no `sharp.extract`); percebido pelo usuário via screenshot e revertido para a logo inteira antes mesmo de eu re-testar o recorte corrigido — mantido o arquivo completo por decisão explícita, não o recorte.
 
+  **Ajuste fino seguinte (mesmo ticket):** o usuário pediu pra escalar a logo usando o máximo de espaço possível **sem** cortar a imagem e **sem** aumentar a altura do header. Solução: a logo saiu do fluxo do flexbox (`position: absolute`, header com `overflow-visible`) e cresceu bem além da faixa de 52px do header (`h-24`/`sm:h-28`), "vazando" visualmente por cima e por baixo da faixa colorida sem afetar a altura real do `<header>` nem sobrepor o conteúdo abaixo. Reposicionada em seguida para alinhar com o mesmo inset horizontal (`left-4`/`sm:left-6`, medido a partir da padding-box do container `relative`) que os botões da direita já respeitavam (`px-4`/`sm:px-6`) — confirmado por medição via Playwright: 88px de cada lado em viewport 1280px.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.
