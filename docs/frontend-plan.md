@@ -230,9 +230,11 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
 ### Ticket: T-FE-12 CRUD de tarefas + templates por etapa
 - **Priority:** P1
+- **Status:** Done
 - **Scope:** Tela do admin para criar tarefa (avulsa ou a partir de template), editar prazo/descrição.
 - **Acceptance Criteria:** Tarefa criada aparece na lista do aluno correspondente.
 - **Validation Steps:** Criar tarefa como admin, conferir na área do aluno.
+- **Notes:** Sem tela própria — formulário "Nova tarefa" e o link "Editar" ficam no mesmo card de `/admin/equipes/[teamId]` usado pela revisão (T-FE-11), mesmo raciocínio de reaproveitar o contexto já reunido em vez de fragmentar em outra rota. Novo `createTask`/`updateTask`/`getTaskTemplates` em `tasks.service.ts`: escolher um template pré-preenche título/descrição (ainda editáveis); tarefa avulsa fica com `templateId: null`. Criar tarefa notifica todos os membros da equipe (`TASK_ASSIGNED`, RF-18). Validado com smoke test: editar prazo de uma tarefa existente reflete na hora; criar tarefa avulsa aparece no card da equipe e, ao trocar para o líder daquela equipe, aparece em `/aluno` na aba Pendentes. Sem erros de console.
 
 ### Ticket: T-FE-13 Lembretes (configuração + manual)
 - **Priority:** P1

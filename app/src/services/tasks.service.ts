@@ -4,6 +4,7 @@
 
 import {
   MOCK_TASK_SUBMISSIONS,
+  MOCK_TASK_TEMPLATES,
   MOCK_TASKS,
   MOCK_TEAM_MEMBERS,
   MOCK_TEAMS,
@@ -15,6 +16,7 @@ import type {
   Task,
   TaskSubmission,
   TaskSubmissionWithUsers,
+  TaskTemplate,
   TaskWithDetails,
   TaskWithTeam,
 } from "@/types";
@@ -62,6 +64,79 @@ export async function getTaskDetail(taskId: string): Promise<TaskWithDetails> {
   const task = MOCK_TASKS.find((t) => t.id === taskId);
   if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
   return toTaskWithDetails(task);
+}
+
+/** Modelos de tarefa pré-configurados por etapa (RF-11). Sem `stageId`,
+ * devolve todos — usado pelo admin ao escolher um template na criação. */
+export async function getTaskTemplates(stageId?: number): Promise<TaskTemplate[]> {
+  await delay();
+  return stageId === undefined
+    ? [...MOCK_TASK_TEMPLATES]
+    : MOCK_TASK_TEMPLATES.filter((t) => t.stageId === stageId);
+}
+
+export interface CreateTaskInput {
+  teamId: string;
+  stageId: number;
+  templateId?: string;
+  title: string;
+  description?: string;
+  dueDate: Date;
+  createdById: string;
+}
+
+/** RF-11, RF-12: cria uma tarefa avulsa ou a partir de um template. */
+export async function createTask(input: CreateTaskInput): Promise<Task> {
+  await delay();
+  const now = new Date();
+  const task: Task = {
+    id: generateId("task"),
+    teamId: input.teamId,
+    stageId: input.stageId,
+    templateId: input.templateId ?? null,
+    title: input.title,
+    description: input.description ?? null,
+    dueDate: input.dueDate,
+    status: TaskStatus.PENDING,
+    createdById: input.createdById,
+    createdAt: now,
+    updatedAt: now,
+  };
+  MOCK_TASKS.push(task);
+
+  const members = MOCK_TEAM_MEMBERS.filter((m) => m.teamId === input.teamId);
+  for (const member of members) {
+    await recordNotification({
+      recipientUserId: member.userId,
+      type: "TASK_ASSIGNED",
+      subject: `Nova tarefa: ${task.title}`,
+      relatedTeamId: task.teamId,
+      relatedTaskId: task.id,
+    });
+  }
+
+  return task;
+}
+
+export interface UpdateTaskInput {
+  taskId: string;
+  title?: string;
+  description?: string;
+  dueDate?: Date;
+}
+
+/** RF-12: editar prazo/descrição/título de uma tarefa já criada. */
+export async function updateTask(input: UpdateTaskInput): Promise<Task> {
+  await delay();
+  const task = MOCK_TASKS.find((t) => t.id === input.taskId);
+  if (!task) throw new Error(`Tarefa ${input.taskId} não encontrada.`);
+
+  if (input.title !== undefined) task.title = input.title;
+  if (input.description !== undefined) task.description = input.description;
+  if (input.dueDate !== undefined) task.dueDate = input.dueDate;
+  task.updatedAt = new Date();
+
+  return task;
 }
 
 export interface SubmitTaskInput {

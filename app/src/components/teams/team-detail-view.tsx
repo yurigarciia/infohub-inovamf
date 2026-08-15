@@ -10,6 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   IDEA_MATURITY_LABELS,
@@ -21,13 +30,22 @@ import { useSession } from "@/lib/session";
 import {
   addTeamNote,
   advanceTeamStage,
+  createTask,
   getJourneyStages,
+  getTaskTemplates,
   getTeamDetail,
   getTasksForTeam,
   reviewSubmission,
+  updateTask,
 } from "@/services";
 import { ReviewStatus, TaskStatus, UserRole } from "@/types";
-import type { JourneyStage, TaskSubmissionWithUsers, TaskWithDetails, TeamDetail } from "@/types";
+import type {
+  JourneyStage,
+  TaskSubmissionWithUsers,
+  TaskTemplate,
+  TaskWithDetails,
+  TeamDetail,
+} from "@/types";
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
@@ -264,8 +282,23 @@ export function TeamDetailView({ teamId }: { teamId: string }) {
               <p className="text-sm text-muted-foreground">Nenhuma tarefa atribuída ainda.</p>
             )}
             {tasks.map((task) => (
-              <TaskReviewItem key={task.id} task={task} isStaff={isStaff} onReviewed={reload} />
+              <TaskReviewItem
+                key={task.id}
+                task={task}
+                isStaff={isStaff}
+                onReviewed={reload}
+                onUpdated={reload}
+              />
             ))}
+            {isStaff && (
+              <NewTaskForm
+                teamId={team.id}
+                currentStageId={team.currentStageId}
+                stages={stages}
+                createdById={user!.id}
+                onCreated={reload}
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -316,22 +349,35 @@ export function TeamDetailView({ teamId }: { teamId: string }) {
   );
 }
 
+function toDateInputValue(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 /** Uma tarefa dentro da página de detalhe da equipe, com aprovação/
- * reprovação de entrega inline (RF-15) e histórico de versões (RF-16). */
+ * reprovação de entrega inline (RF-15), histórico de versões (RF-16)
+ * e edição de título/descrição/prazo (RF-12). */
 function TaskReviewItem({
   task,
   isStaff,
   onReviewed,
+  onUpdated,
 }: {
   task: TaskWithDetails;
   isStaff: boolean;
   onReviewed: () => Promise<void>;
+  onUpdated: () => Promise<void>;
 }) {
   const { user } = useSession();
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectComment, setRejectComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editDescription, setEditDescription] = useState(task.description ?? "");
+  const [editDueDate, setEditDueDate] = useState(toDateInputValue(task.dueDate));
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const currentSubmission = task.submissions.find((s) => s.isCurrent);
   const canReview = isStaff && currentSubmission?.reviewStatus === ReviewStatus.PENDING;
@@ -359,11 +405,73 @@ function TaskReviewItem({
     }
   }
 
+  async function handleSaveEdit() {
+    setIsSavingEdit(true);
+    try {
+      await updateTask({
+        taskId: task.id,
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        dueDate: new Date(`${editDueDate}T00:00:00`),
+      });
+      setIsEditing(false);
+      await onUpdated();
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+        <Textarea
+          rows={2}
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+        />
+        <Input
+          type="date"
+          value={editDueDate}
+          onChange={(e) => setEditDueDate(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSavingEdit || !editTitle.trim()}
+            onClick={handleSaveEdit}
+          >
+            {isSavingEdit ? "Salvando…" : "Salvar"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="text-xs text-muted-foreground underline underline-offset-2"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border border-border p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-sm font-medium">{task.title}</span>
-        <Badge variant={taskStatusVariant(task.status)}>{TASK_STATUS_LABELS[task.status]}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={taskStatusVariant(task.status)}>{TASK_STATUS_LABELS[task.status]}</Badge>
+          {isStaff && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Editar
+            </button>
+          )}
+        </div>
       </div>
       <p className="mb-2 text-xs text-muted-foreground">Prazo: {formatDate(task.dueDate)}</p>
 
@@ -449,6 +557,167 @@ function TaskReviewItem({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Formulário de criação de tarefa (RF-11, RF-12) — avulsa ou a partir
+ * de um template pré-configurado por etapa. */
+function NewTaskForm({
+  teamId,
+  currentStageId,
+  stages,
+  createdById,
+  onCreated,
+}: {
+  teamId: string;
+  currentStageId: number;
+  stages: JourneyStage[];
+  createdById: string;
+  onCreated: () => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [stageId, setStageId] = useState(String(currentStageId));
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [templateId, setTemplateId] = useState<string>("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    getTaskTemplates(Number(stageId)).then(setTemplates);
+  }, [isOpen, stageId]);
+
+  function applyTemplate(nextTemplateId: string) {
+    setTemplateId(nextTemplateId);
+    const template = templates.find((t) => t.id === nextTemplateId);
+    if (template) {
+      setTitle(template.title);
+      setDescription(template.description ?? "");
+    }
+  }
+
+  async function handleSubmit() {
+    setError(null);
+    if (!title.trim()) {
+      setError("Dê um título para a tarefa.");
+      return;
+    }
+    if (!dueDate) {
+      setError("Defina um prazo.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await createTask({
+        teamId,
+        stageId: Number(stageId),
+        templateId: templateId || undefined,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        dueDate: new Date(`${dueDate}T00:00:00`),
+        createdById,
+      });
+      setIsOpen(false);
+      setTemplateId("");
+      setTitle("");
+      setDescription("");
+      setDueDate("");
+      await onCreated();
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (!isOpen) {
+    return (
+      <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setIsOpen(true)}>
+        Nova tarefa
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-border p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-task-stage">Etapa</Label>
+          <Select value={stageId} onValueChange={(v) => v && setStageId(v)}>
+            <SelectTrigger id="new-task-stage" className="w-full">
+              <SelectValue>
+                {() => stages.find((s) => String(s.id) === stageId)?.name ?? "Selecione"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {stages.map((stage) => (
+                <SelectItem key={stage.id} value={String(stage.id)}>
+                  {stage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-task-template">Modelo (opcional)</Label>
+          <Select value={templateId || "__none__"} onValueChange={(v) => applyTemplate(v === "__none__" ? "" : (v ?? ""))}>
+            <SelectTrigger id="new-task-template" className="w-full">
+              <SelectValue>
+                {() => templates.find((t) => t.id === templateId)?.title ?? "Tarefa avulsa"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Tarefa avulsa</SelectItem>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="new-task-title">Título</Label>
+        <Input id="new-task-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="new-task-description">Descrição/instruções</Label>
+        <Textarea
+          id="new-task-description"
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="new-task-due-date">Prazo</Label>
+        <Input
+          id="new-task-due-date"
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="w-48"
+        />
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex gap-2">
+        <Button type="button" size="sm" disabled={isSaving} onClick={handleSubmit}>
+          {isSaving ? "Criando…" : "Criar tarefa"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          className="text-xs text-muted-foreground underline underline-offset-2"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }
