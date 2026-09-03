@@ -155,3 +155,25 @@ Table audit_logs {
   metadata       json
   created_at     timestamp
 }
+
+Table refresh_tokens {
+  id              uuid      [pk, default: `gen_random_uuid()`]
+  user_id         uuid      [ref: > users.id]
+  token_hash      varchar   [unique, note: "hash SHA-256, nunca o token bruto"]
+  issued_at       timestamp
+  expires_at      timestamp
+  revoked_at      timestamp [note: "NULL = ainda valido"]
+  replaced_by_id  uuid      [ref: > refresh_tokens.id, note: "cadeia de rotacao"]
+  user_agent      varchar
+  ip_address      varchar
+  created_at      timestamp
+}
+
+Table password_reset_tokens {
+  id          uuid      [pk, default: `gen_random_uuid()`]
+  user_id     uuid      [ref: > users.id]
+  token_hash  varchar   [unique, note: "hash SHA-256, nunca o token bruto"]
+  expires_at  timestamp [note: "janela curta, ex.: 1h"]
+  used_at     timestamp [note: "NULL = ainda nao usado"]
+  created_at  timestamp
+}

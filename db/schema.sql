@@ -236,6 +236,45 @@ CREATE TABLE audit_logs (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ---------------------------------------------------------------------
+-- 15. REFRESH_TOKENS — controle de sessão (RF-01). O access token em
+--     si é um JWT assinado de vida curta e NÃO é persistido (validado
+--     só por assinatura + expiração, como token stateless de verdade);
+--     o refresh token É persistido porque precisa ser revogável (logout,
+--     troca de senha, "sair de todos os dispositivos") e é rotacionado
+--     a cada uso (token_hash antigo marcado revoked_at, replaced_by_id
+--     aponta pro novo — detecta reuso de token roubado/vazado). Guarda
+--     o HASH do token (SHA-256), nunca o valor bruto — igual a senha,
+--     um vazamento da tabela não deve entregar sessões utilizáveis.
+-- ---------------------------------------------------------------------
+CREATE TABLE refresh_tokens (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash       VARCHAR(255) NOT NULL UNIQUE,
+    issued_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at       TIMESTAMPTZ NOT NULL,
+    revoked_at       TIMESTAMPTZ,                      -- NULL = ainda válido
+    replaced_by_id   UUID REFERENCES refresh_tokens(id),  -- cadeia de rotação
+    user_agent       VARCHAR(255),                      -- contexto do dispositivo/sessão
+    ip_address       INET,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
+-- 16. PASSWORD_RESET_TOKENS — "recuperação de senha" do RF-01. Mesmo
+--     raciocínio de guardar só o hash do refresh_tokens; used_at marca
+--     o token como consumido (uso único) sem precisar apagar a linha,
+--     preservando o registro pra auditoria/rate-limiting de pedidos.
+-- ---------------------------------------------------------------------
+CREATE TABLE password_reset_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  VARCHAR(255) NOT NULL UNIQUE,
+    expires_at  TIMESTAMPTZ NOT NULL,                  -- janela curta, ex.: 1h
+    used_at     TIMESTAMPTZ,                            -- NULL = ainda não usado
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- =====================================================================
 -- ÍNDICES — cobrindo foreign keys e padrões de consulta do painel
 -- do administrador (RF-06, RF-07).
@@ -265,6 +304,11 @@ CREATE INDEX idx_task_reminders_pending     ON task_reminders (remind_at) WHERE 
 CREATE INDEX idx_email_notifications_user   ON email_notifications (recipient_user_id);
 
 CREATE INDEX idx_audit_logs_entity          ON audit_logs (entity_type, entity_id);
+
+CREATE INDEX idx_refresh_tokens_user        ON refresh_tokens (user_id);
+CREATE INDEX idx_refresh_tokens_active      ON refresh_tokens (user_id) WHERE revoked_at IS NULL;
+
+CREATE INDEX idx_password_reset_tokens_user ON password_reset_tokens (user_id);
 
 -- =====================================================================
 -- SEED — dados de referência mínimos (etapas do funil).

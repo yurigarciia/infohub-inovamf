@@ -25,6 +25,8 @@ Registro da atividade de modelagem ao vivo (ver `decisoes.md`). Artefatos gerado
 | `task_reminders` | RF-17, RF-18 (parte de prazo), RF-20 (lembrete manual) |
 | `email_notifications` | RF-18, RF-19 (log de e-mails via Resend) |
 | `audit_logs` | RNF-05 (auditoria) |
+| `refresh_tokens` | RF-01 (controle de sessão — login persiste entre acessos, logout revoga) |
+| `password_reset_tokens` | RF-01 (recuperação de senha) |
 
 RF-22 (dashboard) e RF-23 (export CSV) são resolvidos por consulta sobre as tabelas acima — não exigem tabela própria.
 
@@ -34,6 +36,13 @@ RF-22 (dashboard) e RF-23 (export CSV) são resolvidos por consulta sobre as tab
 - Não em `users`: `admin` e `mentor` também são `users`, e não têm curso/período — colocar ali criaria colunas sempre `NULL` para 2 dos 3 papéis (um cheiro clássico de "atributo de subtipo numa tabela genérica").
 - Solução: `student_profiles`, tabela em relação **1:1** com `users` (chave primária = chave estrangeira, `user_id`), existindo apenas para linhas com `role = 'STUDENT'`. Segue o padrão de "tabela por subtipo" (table-per-subtype).
 
+**Controle de tokens (RF-01 — login/recuperação de senha):** duas tabelas, não três.
+
+- **Access token não tem tabela.** É um JWT assinado de vida curta (ex.: 15 min), validado só por assinatura + expiração — stateless por definição. Persistir o access token no banco eliminaria a vantagem de ser stateless (uma consulta ao banco a cada requisição autenticada, justamente o que o JWT existe pra evitar) sem ganhar nada em troca, já que a expiração curta já limita o estrago de um token roubado.
+- **`refresh_tokens`** existe porque, ao contrário do access token, ele *precisa* ser revogável (logout, "sair de todos os dispositivos", troca de senha) — e revogação exige estado em algum lugar. Rotacionado a cada uso: o token antigo recebe `revoked_at` e `replaced_by_id` aponta pro novo, formando uma cadeia — se um token já revogado for reapresentado, é sinal de reuso (roubo), e dá pra invalidar a cadeia inteira a partir dali.
+- **`password_reset_tokens`** é a tabela por trás do "recuperação de senha" citado no RF-01: token de uso único (`used_at`), janela de validade curta.
+- **As duas guardam `token_hash`, nunca o token em texto puro** — mesmo raciocínio de `users.password_hash`: um vazamento da tabela não deve entregar tokens utilizáveis. O valor bruto só existe em trânsito (URL de reset, cookie do refresh token).
+
 ## 2. Atributos e chave primária
 
 Todas as tabelas de entidade de negócio usam `UUID` como chave primária (`gen_random_uuid()`), exceto as duas tabelas de referência estática (`idea_areas`, `journey_stages`), que usam `SERIAL`, por serem pequenas listas de apoio (lookup), sem necessidade de UUID. Ver `db/schema.sql` para a lista completa de colunas, tipos e `CHECK` constraints (ex.: `role`, `status`, `review_status` como enums via `CHECK`).
@@ -41,7 +50,8 @@ Todas as tabelas de entidade de negócio usam `UUID` como chave primária (`gen_
 ## 3. Relacionamentos
 
 - **1:1**: `users ↔ student_profiles` (só existe quando `role = 'STUDENT'`).
-- **1:N**: `idea_areas → teams`, `journey_stages → teams/tasks/task_templates/team_stage_history`, `teams → tasks/team_notes/team_stage_history`, `tasks → task_submissions/task_reminders`, `users → team_notes/audit_logs/email_notifications` (como autor/ator/destinatário).
+- **1:N**: `idea_areas → teams`, `journey_stages → teams/tasks/task_templates/team_stage_history`, `teams → tasks/team_notes/team_stage_history`, `tasks → task_submissions/task_reminders`, `users → team_notes/audit_logs/email_notifications/refresh_tokens/password_reset_tokens` (como autor/ator/destinatário/titular).
+- **1:N recursivo (auto-relacionamento)**: `refresh_tokens → refresh_tokens` via `replaced_by_id`, formando a cadeia de rotação de um token pro seu sucessor.
 - **N:N** (via tabela associativa): `users ↔ teams` através de `team_members` (um aluno pode ter contas em múltiplas equipes — Q4) e `users ↔ teams` através de `team_mentors` (um mentor pode atender várias equipes, uma equipe pode ter mais de um mentor).
 
 ## 4. Decisões em aberto (Q1–Q7) aplicadas ao modelo
