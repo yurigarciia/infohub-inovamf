@@ -417,6 +417,14 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 - **Validation Steps:** Abrir `/equipes/team-5`, conferir que a tarefa pendente tem "Enviar lembrete agora" e as 3 aprovadas não.
 - **Notes:** `task-review-item.tsx` passou a condicionar a renderização de `<ReminderSection>` com `PENDING_TASK_STATUSES.includes(task.status)` (mesmo critério já usado pra separar Pendentes/Concluídas no T-FE-30 e na área do aluno) — sem lógica nova, só reuso do critério já estabelecido. Efeito colateral correto: tarefa `SUBMITTED` (entregue, aguardando revisão) também não mostra mais lembrete, já que não há nada a cobrar do aluno nesse estado. Validado com screenshot: `team-5` mostra o botão só na tarefa "Preparar roteiro do Pitch" (pendente), ausente nas 3 aprovadas.
 
+### Ticket: T-FE-32 Terceiro grupo "Aguardando avaliação do InfoHub"
+- **Priority:** P2
+- **Status:** Done
+- **Scope:** Pergunta do usuário revelou um gap real: com só Pendentes/Concluídas (T-FE-30), uma tarefa `SUBMITTED` (aluno já entregou, falta admin/mentor decidir) caía junto com "Concluídas" — escondendo exatamente o que precisa de ação do InfoHub agora.
+- **Acceptance Criteria:** `TeamTasksCard` ganha um terceiro grupo "Aguardando avaliação do InfoHub" (status `SUBMITTED`), entre Pendentes e Concluídas; "Concluídas" passa a significar só `APPROVED` de fato.
+- **Validation Steps:** Abrir `/equipes/team-6` (tem uma tarefa `SUBMITTED` com reenvio pendente de revisão) e conferir os três grupos com contadores corretos; checar 375px sem overflow.
+- **Notes:** `team-tasks-card.tsx` foi de dois filtros pra uma lista de três grupos (`Pendentes` = `PENDING_TASK_STATUSES`, que já cobre `REJECTED` — reenvio também é responsabilidade do aluno; `Aguardando avaliação do InfoHub` = só `SUBMITTED`; `Concluídas` = só `APPROVED`), renderizados via `.map` em vez de blocos JSX duplicados — mais fácil de estender se aparecer um quarto grupo no futuro. Validado com screenshot: `team-6` (AgroSmart) mostra "Pendentes (0)" / "Aguardando avaliação do InfoHub (1)" — com os botões Aprovar/Reprovar já visíveis ali — / "Concluídas (4)"; zero overflow em 375px. Sem erros de console.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.
