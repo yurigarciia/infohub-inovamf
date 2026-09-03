@@ -1,5 +1,6 @@
 "use client";
 
+import { KanbanSquare, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
 import { SidebarNav, type SidebarNavItem } from "@/components/layout/sidebar-nav";
 import { useSession } from "@/lib/session";
 import { UserRole } from "@/types";
@@ -8,12 +9,14 @@ import { UserRole } from "@/types";
  * exclusivos do administrador (RF-22, RNF-05, RF-03); mentor só enxerga
  * o funil de equipes sob sua responsabilidade. */
 function itemsForRole(role: UserRole | undefined): SidebarNavItem[] {
-  const items: SidebarNavItem[] = [{ label: "Funil de equipes", href: "/admin" }];
+  const items: SidebarNavItem[] = [
+    { label: "Funil de equipes", href: "/admin", icon: KanbanSquare },
+  ];
   if (role === UserRole.ADMIN) {
     items.push(
-      { label: "Dashboard", href: "/admin/dashboard" },
-      { label: "Auditoria", href: "/admin/auditoria" },
-      { label: "Contas", href: "/admin/contas" },
+      { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+      { label: "Auditoria", href: "/admin/auditoria", icon: ShieldCheck },
+      { label: "Contas", href: "/admin/contas", icon: Users },
     );
   }
   return items;
