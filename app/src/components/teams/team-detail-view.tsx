@@ -85,7 +85,7 @@ export function TeamDetailView({ teamId }: { teamId: string }) {
     <div className="flex flex-1 flex-col gap-6 px-6 py-8">
       <div>
         <Link
-          href={isStaff ? "/admin" : "/aluno/equipes"}
+          href={isStaff ? "/admin/equipes" : "/aluno/equipes"}
           className="text-xs text-muted-foreground hover:text-foreground"
         >
           ← {isStaff ? "Voltar ao funil" : "Voltar às minhas equipes"}

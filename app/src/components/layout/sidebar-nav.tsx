@@ -43,7 +43,7 @@ export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
 
   // Item ativo = o de href mais específico que casa com a rota atual
   // (evita dois itens ficarem ativos ao mesmo tempo quando um href é
-  // prefixo do outro, ex.: /admin e /admin/dashboard).
+  // prefixo do outro, ex.: /admin/equipes e /admin/equipes/algumacoisa).
   const activeHref = items
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;

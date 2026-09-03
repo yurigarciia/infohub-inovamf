@@ -383,6 +383,16 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 
   **Bug de centralização na sidebar colapsada:** os ícones ficavam alinhados à esquerda em vez de centralizados quando a sidebar colapsa. Causa: a classe `md:justify-start` era aplicada incondicionalmente e `md:justify-center` só quando colapsado — as duas competindo no mesmo breakpoint, com a ordem de precedência decidida pela ordem interna do CSS gerado pelo Tailwind (não pela ordem em que as classes aparecem no `className`), então `justify-start` vencia mesmo colapsado. Corrigido tornando as duas mutuamente exclusivas (`isCollapsed ? "md:justify-center md:px-0" : "md:justify-start"`).
 
+### Ticket: T-FE-28 Dashboard como home da área administrativa
+- **Priority:** P2
+- **Status:** Done
+- **Scope:** Pedido do usuário: ao entrar como administrador, a home deve ser o dashboard (não mais o funil/kanban), e "Dashboard" deve ser o primeiro item da sidebar.
+- **Acceptance Criteria:** Admin logando cai direto em `/admin` mostrando o dashboard; "Dashboard" é o primeiro item da sidebar (só pra ADMIN); "Funil de equipes" continua acessível (agora em `/admin/equipes`), primeiro item pra MENTOR (que não tem dashboard). Mentor logando não deve ver a mensagem de "exclusivo do administrador" — precisa cair direto no funil.
+- **Validation Steps:** Login como admin (cai no dashboard) e como mentor (cai no funil, sem mensagem de acesso negado); clicar "Funil de equipes" a partir do dashboard; conferir link "Voltar ao funil" na página de detalhe de equipe; checar 375px sem overflow.
+- **Notes:** Troca de rotas: conteúdo de `admin/dashboard/page.tsx` passou a ser `admin/page.tsx` (a home), e o antigo `admin/page.tsx` (kanban) virou `admin/equipes/page.tsx`. Como login/landing/redirects já apontavam genericamente pra `/admin` (não para uma URL fixa do kanban), a troca do que `/admin` significa não exigiu mudança nesses pontos — exceto o link "Voltar ao funil" em `team-detail-view.tsx`, que precisou apontar explicitamente pra `/admin/equipes` (antes ia pra `/admin`, que agora é o dashboard, não o funil). `admin-sidebar.tsx` reordenado: Dashboard primeiro (só ADMIN), depois Funil de equipes, Auditoria, Contas.
+
+  O dashboard continua sendo ADMIN-only (RF-22 é "pra coordenação"), mas como ele virou a home de `/admin` — rota que tanto ADMIN quanto MENTOR acessam ao logar — um MENTOR caindo ali agora é redirecionado automaticamente (`router.replace`) pro funil (`/admin/equipes`) em vez de ver a mensagem de acesso negado que fazia sentido antes (quando `/admin/dashboard` era uma rota "extra", não a home de ninguém). Regenerado `.next/types/routes` via `npm run build` (mesmo padrão de mudança de rota já visto em tickets anteriores). Validado com Playwright: admin → `/admin` (dashboard); mentor → `/admin/equipes` direto, sem tela intermediária de erro; back-link da equipe aponta pra `/admin/equipes`; zero overflow em 375px. Sem erros de console.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.

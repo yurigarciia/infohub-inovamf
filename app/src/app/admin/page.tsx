@@ -1,147 +1,108 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { ALL_VALUE } from "@/components/filters/filter-select";
-import { ExportTeamsCsvButton } from "@/components/admin/export-teams-csv-button";
-import { TeamBoardCard } from "@/components/teams/team-board-card";
-import { TeamFiltersBar } from "@/components/admin/team-filters-bar";
-import {
-  getCohorts,
-  getIdeaAreas,
-  getJourneyStages,
-  getMentors,
-  getTeamsByStage,
-} from "@/services";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSession } from "@/lib/session";
-import { TaskStatus, UserRole } from "@/types";
-import type { IdeaArea, JourneyStage, TeamBoardItem, TeamFilters, User } from "@/types";
+import { getDashboardStats } from "@/services";
+import { UserRole } from "@/types";
+import type { DashboardStats } from "@/types";
 
-/** Painel do administrador/mentor — funil/kanban (RF-06, RF-07).
- * RNF-03: restrito a ADMIN/MENTOR — aluno ou visitante não autenticado
- * não deve ver dados internos de nenhuma equipe aqui. */
-export default function AdminHomePage() {
+/** Cor da barra por posição na jornada — mesma escala de marca usada
+ * nos badges de etapa em outras telas (etapa 1 mais clara/laranja,
+ * etapa 6 mais escura/bordô), reforçando visualmente "a jornada
+ * esquenta conforme avança". */
+const STAGE_BAR_COLORS = [
+  "bg-brand-300",
+  "bg-brand-400",
+  "bg-brand-500",
+  "bg-brand-600",
+  "bg-brand-700",
+  "bg-brand-800",
+];
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="py-5">
+        <p className="text-3xl font-semibold tabular-nums">{value}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Dashboard com indicadores gerais para a coordenação (RF-22) — home
+ * da área administrativa (T-FE-28). O dashboard é exclusivo do
+ * administrador; mentor (que também "mora" em `/admin` por padrão)
+ * é redirecionado direto pro funil de equipes, que é a tela útil
+ * pra ele. */
+export default function AdminDashboardPage() {
+  const router = useRouter();
   const { user, isLoading: sessionLoading } = useSession();
-  const [stages, setStages] = useState<JourneyStage[]>([]);
-  const [areas, setAreas] = useState<IdeaArea[]>([]);
-  const [mentors, setMentors] = useState<User[]>([]);
-  const [cohorts, setCohorts] = useState<string[]>([]);
-  const [teams, setTeams] = useState<TeamBoardItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [search, setSearch] = useState("");
-  const [course, setCourse] = useState("");
-  const [areaId, setAreaId] = useState<string>(ALL_VALUE);
-  const [taskStatus, setTaskStatus] = useState<string>(ALL_VALUE);
-  const [mentorId, setMentorId] = useState<string>(ALL_VALUE);
-  const [cohort, setCohort] = useState<string>(ALL_VALUE);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    Promise.all([getJourneyStages(), getIdeaAreas(), getMentors(), getCohorts()]).then(
-      ([loadedStages, loadedAreas, loadedMentors, loadedCohorts]) => {
-        setStages(loadedStages);
-        setAreas(loadedAreas);
-        setMentors(loadedMentors);
-        setCohorts(loadedCohorts);
-      },
-    );
-  }, []);
+    if (user?.role !== UserRole.ADMIN) return;
+    Promise.resolve().then(() => getDashboardStats().then(setStats));
+  }, [user?.role]);
 
   useEffect(() => {
-    const filters: TeamFilters = {};
-    if (search.trim()) filters.search = search.trim();
-    if (course.trim()) filters.course = course.trim();
-    if (areaId !== ALL_VALUE) filters.areaId = Number(areaId);
-    if (taskStatus !== ALL_VALUE) filters.taskStatus = taskStatus as TaskStatus;
-    if (mentorId !== ALL_VALUE) filters.mentorId = mentorId;
-    if (cohort !== ALL_VALUE) filters.cohort = cohort;
+    if (user?.role === UserRole.MENTOR) router.replace("/admin/equipes");
+  }, [user?.role, router]);
 
-    let cancelled = false;
-    // setIsLoading(true) fica dentro do .then (não direto no corpo do
-    // effect) pra não disparar um setState síncrono durante o commit.
-    Promise.resolve().then(async () => {
-      if (cancelled) return;
-      setIsLoading(true);
-      const loaded = await getTeamsByStage(filters);
-      if (cancelled) return;
-      setTeams(loaded);
-      setIsLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [search, course, areaId, taskStatus, mentorId, cohort]);
-
-  if (sessionLoading) {
+  if (sessionLoading || user?.role === UserRole.MENTOR) {
     return <p className="px-6 py-8 text-sm text-muted-foreground">Carregando…</p>;
   }
 
-  if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.MENTOR) {
+  if (user?.role !== UserRole.ADMIN) {
     return (
       <p className="px-6 py-8 text-sm text-muted-foreground">
-        Esta área é exclusiva para administradores e mentores.
+        O dashboard é exclusivo da coordenação (administrador).
       </p>
     );
   }
 
-  const teamsByStage = new Map<number, TeamBoardItem[]>();
-  for (const team of teams) {
-    const list = teamsByStage.get(team.currentStageId) ?? [];
-    list.push(team);
-    teamsByStage.set(team.currentStageId, list);
+  if (!stats) {
+    return <p className="px-6 py-8 text-sm text-muted-foreground">Carregando…</p>;
   }
+
+  const maxStageCount = Math.max(1, ...stats.byStage.map((s) => s.count));
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-6 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">Funil de equipes</h1>
-          <p className="text-sm text-muted-foreground">
-            {isLoading ? "Carregando…" : `${teams.length} equipe(s) encontrada(s)`}
-          </p>
-        </div>
-        <ExportTeamsCsvButton teams={teams} />
+      <div>
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Visão geral do funil InfoHub → InovAMF</p>
       </div>
 
-      <TeamFiltersBar
-        search={search}
-        onSearchChange={setSearch}
-        course={course}
-        onCourseChange={setCourse}
-        areaId={areaId}
-        onAreaIdChange={setAreaId}
-        areas={areas}
-        taskStatus={taskStatus}
-        onTaskStatusChange={setTaskStatus}
-        mentorId={mentorId}
-        onMentorIdChange={setMentorId}
-        mentors={mentors}
-        cohort={cohort}
-        onCohortChange={setCohort}
-        cohorts={cohorts}
-      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatTile label="Equipes ativas" value={stats.totalActiveTeams} />
+        <StatTile label="Tarefas atrasadas" value={stats.lateTasksCount} />
+        <StatTile label="Prontas para o InovAMF" value={stats.readyForInovamfCount} />
+      </div>
 
-      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => {
-          const stageTeams = teamsByStage.get(stage.id) ?? [];
-          return (
-            <div key={stage.id} className="flex w-72 shrink-0 flex-col gap-3">
-              <div className="flex items-center justify-between rounded-md border-l-4 border-brand-600 bg-brand-50 px-3 py-2">
-                <span className="text-sm font-semibold text-brand-800">{stage.name}</span>
-                <Badge className="bg-brand-600 text-white">{stageTeams.length}</Badge>
+      <Card>
+        <CardHeader>
+          <CardTitle>Distribuição por etapa</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {stats.byStage.map((stage, index) => (
+            <div key={stage.stageId} className="flex items-center gap-3">
+              <span className="w-48 shrink-0 text-sm text-muted-foreground">{stage.stageName}</span>
+              <div className="h-3 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className={`h-full rounded-full ${STAGE_BAR_COLORS[index % STAGE_BAR_COLORS.length]}`}
+                  style={{ width: `${(stage.count / maxStageCount) * 100}%` }}
+                />
               </div>
-              <div className="flex flex-col gap-3">
-                {stageTeams.map((team) => (
-                  <TeamBoardCard key={team.id} team={team} />
-                ))}
-                {stageTeams.length === 0 && !isLoading && (
-                  <p className="px-1 text-xs text-muted-foreground">Nenhuma equipe aqui.</p>
-                )}
-              </div>
+              <span className="w-6 shrink-0 text-right text-sm font-medium tabular-nums">
+                {stage.count}
+              </span>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

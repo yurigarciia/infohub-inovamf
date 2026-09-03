@@ -7,14 +7,16 @@ import { UserRole } from "@/types";
 
 /** Itens da sidebar por papel — Dashboard/Auditoria/Contas são
  * exclusivos do administrador (RF-22, RNF-05, RF-03); mentor só enxerga
- * o funil de equipes sob sua responsabilidade. */
+ * o funil de equipes sob sua responsabilidade. Dashboard vem primeiro
+ * (T-FE-28): é a home da área administrativa (`/admin`). */
 function itemsForRole(role: UserRole | undefined): SidebarNavItem[] {
-  const items: SidebarNavItem[] = [
-    { label: "Funil de equipes", href: "/admin", icon: KanbanSquare },
-  ];
+  const items: SidebarNavItem[] = [];
+  if (role === UserRole.ADMIN) {
+    items.push({ label: "Dashboard", href: "/admin", icon: LayoutDashboard });
+  }
+  items.push({ label: "Funil de equipes", href: "/admin/equipes", icon: KanbanSquare });
   if (role === UserRole.ADMIN) {
     items.push(
-      { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { label: "Auditoria", href: "/admin/auditoria", icon: ShieldCheck },
       { label: "Contas", href: "/admin/contas", icon: Users },
     );
