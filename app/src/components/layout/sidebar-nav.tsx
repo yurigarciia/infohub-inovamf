@@ -62,8 +62,8 @@ export function SidebarNav({ items }: { items: SidebarNavItem[] }) {
             key={item.href}
             href={item.href}
             title={isCollapsed ? item.label : undefined}
-            className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors md:justify-start ${
-              isCollapsed ? "md:justify-center md:px-0" : ""
+            className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+              isCollapsed ? "md:justify-center md:px-0" : "md:justify-start"
             } ${
               isActive
                 ? "bg-brand-50 text-brand-700"

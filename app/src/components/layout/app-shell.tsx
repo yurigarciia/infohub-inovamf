@@ -24,15 +24,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="relative mx-auto flex max-w-6xl items-center justify-end gap-4 px-4 py-3 sm:px-6">
           {/* A logo fica fora do fluxo (ver acima do header) — posicionada
               com o mesmo inset (left-4/6) do padding do container, pra
-              alinhar com a mesma margem que os botões respeitam à direita. */}
-          <Link href="/" className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center sm:left-6">
+              alinhar com a mesma margem que os botões respeitam à direita.
+              Vaza só pra baixo (top-0, não centralizada): como o header é
+              o primeiro elemento da página, um vazamento pra cima ficava
+              cortado pelo topo do viewport/documento (não tinha pra onde
+              "vazar"). */}
+          <Link href="/" className="absolute top-0 left-4 z-10 flex items-center sm:left-6">
             <Image
               src="/logo-branca.png"
               alt="InfoHub"
               width={1024}
-              height={1024}
+              height={1}
               priority
-              className="h-24 w-24 sm:h-28 sm:w-28"
+              className="h-12 w-24 sm:h-10 sm:w-28 mt-0.5"
             />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
