@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { REVIEW_STATUS_LABELS, TASK_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, taskStatusVariant, toDateInputValue } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { PENDING_TASK_STATUSES } from "@/lib/task-status";
 import { reviewSubmission, updateTask } from "@/services";
 import { ReviewStatus } from "@/types";
 import type { TaskSubmissionWithUsers, TaskWithDetails } from "@/types";
@@ -214,7 +215,11 @@ export function TaskReviewItem({
         </div>
       )}
 
-      {isStaff && <ReminderSection task={task} onChanged={onUpdated} />}
+      {/* Lembrete só faz sentido pra tarefa que ainda precisa de ação do
+          aluno — numa já aprovada/entregue não há o que lembrar (T-FE-31). */}
+      {isStaff && PENDING_TASK_STATUSES.includes(task.status) && (
+        <ReminderSection task={task} onChanged={onUpdated} />
+      )}
     </div>
   );
 }

@@ -409,6 +409,14 @@ Ações que "escrevem" (aprovar tarefa, avançar etapa, criar tarefa) devem muta
 - **Validation Steps:** Abrir `/equipes/team-5` e `/equipes/team-6` e conferir a separação com contadores corretos; checar 375px sem overflow; sem erros de console.
 - **Notes:** `team-tasks-card.tsx` reaproveita `PENDING_TASK_STATUSES` (`lib/task-status.ts`, já usado em `app/aluno/page.tsx`) pra filtrar em dois grupos — nenhuma lógica nova de status, só reuso do mesmo critério já estabelecido. `tasks.mock.ts` ganhou 6 tarefas novas (`task-10` a `task-15`, todas `APPROVED`, usando os templates existentes de RF-11) cobrindo as etapas 3 e 4 do `team-5`, etapas 3-5 do `team-6` e etapa 3 do `team-4` — janelas de data alinhadas com `MOCK_TEAM_STAGE_HISTORY` (`enteredAt`/`exitedAt` de cada etapa), com as respectivas `TaskSubmission` (`sub-10-1` a `sub-15-1`). Resultado: `team-5` (TechMentor) passa de 2 para 4 tarefas (1 pendente + 3 concluídas); `team-6` (AgroSmart, a mais avançada) passa de 2 para 5 tarefas, todas concluídas. Validado com screenshot full-page: contadores "Pendentes (1)"/"Concluídas (3)" no `team-5`, "Pendentes (0)"/"Concluídas (5)" no `team-6`; zero overflow em 375px. Sem erros de console.
 
+### Ticket: T-FE-31 Some o lembrete de tarefas já concluídas
+- **Priority:** P3
+- **Status:** Done
+- **Scope:** Percebido logo após o T-FE-30 (a separação Pendentes/Concluídas deixou isso visível): o botão "Enviar lembrete agora" aparecia em qualquer tarefa, incluindo as já aprovadas/entregues — não faz sentido lembrar o aluno de algo que ele já entregou e foi aprovado.
+- **Acceptance Criteria:** `ReminderSection` só aparece em tarefas com status que ainda exigem ação do aluno (pendente, em andamento, atrasada, reprovada).
+- **Validation Steps:** Abrir `/equipes/team-5`, conferir que a tarefa pendente tem "Enviar lembrete agora" e as 3 aprovadas não.
+- **Notes:** `task-review-item.tsx` passou a condicionar a renderização de `<ReminderSection>` com `PENDING_TASK_STATUSES.includes(task.status)` (mesmo critério já usado pra separar Pendentes/Concluídas no T-FE-30 e na área do aluno) — sem lógica nova, só reuso do critério já estabelecido. Efeito colateral correto: tarefa `SUBMITTED` (entregue, aguardando revisão) também não mostra mais lembrete, já que não há nada a cobrar do aluno nesse estado. Validado com screenshot: `team-5` mostra o botão só na tarefa "Preparar roteiro do Pitch" (pendente), ausente nas 3 aprovadas.
+
 ## 6. Definition of Done (desta etapa)
 
 - Todas as telas P0 (Seção 3) navegáveis de ponta a ponta usando dados mockados via `services/`.
