@@ -3,15 +3,24 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { REVIEW_STATUS_LABELS, TASK_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, taskStatusVariant } from "@/lib/format";
 import { PENDING_TASK_STATUSES } from "@/lib/task-status";
-import type { TaskWithTeam } from "@/types";
+import type { TaskSubmissionWithUsers, TaskWithTeam } from "@/types";
 import { TaskSubmissionForm } from "./task-submission-form";
 
-/** Card de uma tarefa na área do aluno (RF-13), com envio de entrega
- * inline quando ela ainda está pendente. */
+/** Uma tarefa na área do aluno (RF-13): linha resumo clicável (nome,
+ * equipe, prazo, status) que abre um dialog com os detalhes completos
+ * — descrição/instruções, histórico de entregas com link e comentário
+ * do mentor — e o envio de entrega quando ainda pendente (T-FE-34,
+ * mesmo padrão de dialog já usado na tela de equipe do admin/mentor). */
 export function TaskCard({
   task,
   studentId,
@@ -21,38 +30,63 @@ export function TaskCard({
   studentId: string;
   onSubmitted: () => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const canSubmit = PENDING_TASK_STATUSES.includes(task.status);
   const currentSubmission = task.submissions.find((s) => s.isCurrent);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-base">{task.title}</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {task.team.ideaName} · Prazo: {formatDate(task.dueDate)}
-            </p>
-          </div>
-          <Badge variant={taskStatusVariant(task.status)}>{TASK_STATUS_LABELS[task.status]}</Badge>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-white p-3 text-left transition-colors hover:bg-neutral-50">
+        <div>
+          <p className="text-sm font-medium">{task.title}</p>
+          <p className="text-xs text-muted-foreground">
+            {task.team.ideaName} · Prazo: {formatDate(task.dueDate)}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+        <Badge variant={taskStatusVariant(task.status)}>{TASK_STATUS_LABELS[task.status]}</Badge>
+      </DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-2 pr-6">
+            <DialogTitle>{task.title}</DialogTitle>
+            <Badge variant={taskStatusVariant(task.status)}>{TASK_STATUS_LABELS[task.status]}</Badge>
+          </div>
+        </DialogHeader>
+
+        <p className="text-xs text-muted-foreground">
+          {task.team.ideaName} · Prazo: {formatDate(task.dueDate)}
+        </p>
+
+        {task.description && <p className="text-sm">{task.description}</p>}
+
+        {task.submissions.length > 0 && (
+          <ul className="flex flex-col gap-1 text-xs">
+            {task.submissions.map((submission: TaskSubmissionWithUsers) => (
+              <li key={submission.id} className="flex items-center justify-between gap-2">
+                <a
+                  href={submission.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate text-brand-700 underline underline-offset-2"
+                >
+                  v{submission.version}
+                  {submission.isExternalLink ? " (link)" : ""}
+                </a>
+                <span className="shrink-0 text-muted-foreground">
+                  {REVIEW_STATUS_LABELS[submission.reviewStatus]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {currentSubmission?.reviewComment && (
           <p className="rounded-md bg-neutral-100 p-2 text-sm">
             <span className="font-medium">Comentário do mentor: </span>
             {currentSubmission.reviewComment}
-          </p>
-        )}
-
-        {currentSubmission && (
-          <p className="text-xs text-muted-foreground">
-            Última entrega: v{currentSubmission.version} —{" "}
-            {REVIEW_STATUS_LABELS[currentSubmission.reviewStatus]}
           </p>
         )}
 
@@ -68,12 +102,13 @@ export function TaskCard({
             studentId={studentId}
             onSubmitted={() => {
               setIsFormOpen(false);
+              setIsOpen(false);
               onSubmitted();
             }}
             onCancel={() => setIsFormOpen(false)}
           />
         )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
