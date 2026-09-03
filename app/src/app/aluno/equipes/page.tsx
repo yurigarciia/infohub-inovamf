@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { TeamBoardCard } from "@/components/teams/team-board-card";
 import { useSession } from "@/lib/session";
 import { getTeamsForStudent } from "@/services";
@@ -9,9 +8,11 @@ import { UserRole } from "@/types";
 import type { TeamBoardItem } from "@/types";
 
 /** Lista das equipes que o aluno integra — um aluno pode participar de
- * mais de uma (Q4). Com só uma equipe, pula direto pro detalhe dela. */
+ * mais de uma (Q4). Sempre mostra a lista, mesmo com uma equipe só
+ * (T-FE-29): pular direto pro detalhe criava um loop — o link "Voltar"
+ * de dentro da equipe trazia de volta pra cá, que redirecionava na
+ * hora de novo pra lá. */
 export default function AlunoEquipesPage() {
-  const router = useRouter();
   const { user, isLoading: sessionLoading } = useSession();
   const [teams, setTeams] = useState<TeamBoardItem[] | null>(null);
 
@@ -19,12 +20,6 @@ export default function AlunoEquipesPage() {
     if (!user) return;
     Promise.resolve().then(() => getTeamsForStudent(user.id).then(setTeams));
   }, [user]);
-
-  useEffect(() => {
-    if (teams && teams.length === 1) {
-      router.replace(`/equipes/${teams[0].id}`);
-    }
-  }, [teams, router]);
 
   if (sessionLoading) {
     return <p className="px-6 py-8 text-sm text-muted-foreground">Carregando…</p>;
@@ -38,7 +33,7 @@ export default function AlunoEquipesPage() {
     return <p className="px-6 py-8 text-sm text-muted-foreground">Esta área é exclusiva para alunos.</p>;
   }
 
-  if (!teams || (teams.length === 1)) {
+  if (!teams) {
     return <p className="px-6 py-8 text-sm text-muted-foreground">Carregando…</p>;
   }
 
