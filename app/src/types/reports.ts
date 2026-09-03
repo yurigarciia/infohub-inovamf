@@ -12,4 +12,7 @@ export interface DashboardStats {
   byStage: DashboardStageCount[];
   lateTasksCount: number;
   readyForInovamfCount: number;
+  /** Tarefas com entrega feita, aguardando aprovação/reprovação do
+   * InfoHub (status SUBMITTED) — T-FE-33. */
+  awaitingReviewCount: number;
 }

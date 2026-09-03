@@ -76,8 +76,9 @@ export default function AdminDashboardPage() {
         <p className="text-sm text-muted-foreground">Visão geral do funil InfoHub → InovAMF</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Equipes ativas" value={stats.totalActiveTeams} />
+        <StatTile label="Aguardando aprovação" value={stats.awaitingReviewCount} />
         <StatTile label="Tarefas atrasadas" value={stats.lateTasksCount} />
         <StatTile label="Prontas para o InovAMF" value={stats.readyForInovamfCount} />
       </div>

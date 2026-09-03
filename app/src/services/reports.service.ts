@@ -26,6 +26,10 @@ export async function getDashboardStats(cohort?: string): Promise<DashboardStats
     (t) => teamIds.has(t.teamId) && t.status === TaskStatus.LATE,
   ).length;
 
+  const awaitingReviewCount = MOCK_TASKS.filter(
+    (t) => teamIds.has(t.teamId) && t.status === TaskStatus.SUBMITTED,
+  ).length;
+
   const readyForInovamfCount = teams.filter((t) => t.isReadyForInovamf).length;
 
   return {
@@ -33,5 +37,6 @@ export async function getDashboardStats(cohort?: string): Promise<DashboardStats
     byStage,
     lateTasksCount,
     readyForInovamfCount,
+    awaitingReviewCount,
   };
 }
