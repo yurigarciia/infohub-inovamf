@@ -34,9 +34,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               src="/logo-branca.png"
               alt="InfoHub"
               width={1024}
-              height={1}
+              height={10}
               priority
-              className="h-12 w-24 sm:h-10 sm:w-28 mt-0.5"
+              className="h-20 w-24 sm:h-18 sm:w-20 -mt-2"
             />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
