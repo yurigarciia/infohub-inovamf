@@ -8,6 +8,7 @@ import { auditRoutes } from "./modules/audit/audit.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { notificationsRoutes } from "./modules/notifications/notifications.routes.js";
 import { referenceRoutes } from "./modules/reference/reference.routes.js";
+import { reportsRoutes } from "./modules/reports/reports.routes.js";
 import { tasksRoutes } from "./modules/tasks/tasks.routes.js";
 import { teamsRoutes } from "./modules/teams/teams.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
@@ -44,7 +45,7 @@ export function createApp(): Express {
   app.use("/", tasksRoutes); // RF-11..20 — /task-templates, /tasks, /submissions
   app.use("/", auditRoutes); // RNF-05 — /audit-logs
   app.use("/", notificationsRoutes); // RF-18/19 — /notifications/mine
-  // reports entra no próximo módulo (B6)
+  app.use("/", reportsRoutes); // RF-22/24 — /reports/dashboard
 
   app.use(notFoundHandler);
   app.use(errorHandler);
