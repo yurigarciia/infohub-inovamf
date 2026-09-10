@@ -4,7 +4,9 @@ import express, { type Express } from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { auditRoutes } from "./modules/audit/audit.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { notificationsRoutes } from "./modules/notifications/notifications.routes.js";
 import { referenceRoutes } from "./modules/reference/reference.routes.js";
 import { tasksRoutes } from "./modules/tasks/tasks.routes.js";
 import { teamsRoutes } from "./modules/teams/teams.routes.js";
@@ -40,7 +42,9 @@ export function createApp(): Express {
   app.use("/", referenceRoutes); // RF-04 — /journey-stages, /idea-areas, /cohorts
   app.use("/teams", teamsRoutes); // RF-02, RF-06..10, RN-01
   app.use("/", tasksRoutes); // RF-11..20 — /task-templates, /tasks, /submissions
-  // reports, audit, notifications entram nos próximos módulos (B5+)
+  app.use("/", auditRoutes); // RNF-05 — /audit-logs
+  app.use("/", notificationsRoutes); // RF-18/19 — /notifications/mine
+  // reports entra no próximo módulo (B6)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

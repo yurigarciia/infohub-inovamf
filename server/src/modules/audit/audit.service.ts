@@ -1,5 +1,7 @@
 import type { PoolClient } from "pg";
 import { query } from "../../shared/sql.js";
+import * as repo from "./audit.repository.js";
+import type { AuditLogWithActorRow } from "./audit.repository.js";
 
 /**
  * Trilha de auditoria (RNF-05). Chamado pelos outros módulos sempre que
@@ -35,4 +37,9 @@ export async function recordAuditLog(input: RecordAuditLogInput): Promise<void> 
   } else {
     await query(sql, params);
   }
+}
+
+/** RNF-05 — trilha de auditoria para a tela do admin (mais recentes primeiro). */
+export async function getRecentAuditLogs(limit = 100): Promise<AuditLogWithActorRow[]> {
+  return repo.listRecent(Math.min(Math.max(limit, 1), 500));
 }

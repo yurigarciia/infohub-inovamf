@@ -1,6 +1,8 @@
 import { maybeOne, query } from "../../shared/sql.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { emailSender } from "./notifications.adapter.js";
+import * as repo from "./notifications.repository.js";
+import type { EmailNotificationRow } from "./notifications.repository.js";
 
 /**
  * Registra (e "envia") um e-mail transacional — RF-18, RF-19. Chamado
@@ -70,4 +72,12 @@ export async function recordNotification(input: RecordNotificationInput): Promis
     action: "EMAIL_SENT",
     metadata: { type: input.type, recipientUserId: input.recipientUserId, status },
   });
+}
+
+/** RF-18/19 — histórico de e-mails do usuário autenticado. */
+export async function getNotificationsForUser(
+  userId: string,
+  limit = 100,
+): Promise<EmailNotificationRow[]> {
+  return repo.listForUser(userId, Math.min(Math.max(limit, 1), 300));
 }
