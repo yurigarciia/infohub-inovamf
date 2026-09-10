@@ -1,7 +1,7 @@
 // Autenticação (RF-01) — fala com o backend (server/) via api-client.
 // Substitui o "login mockado" da fase anterior (T-FE-06).
 
-import { apiFetch, setAccessToken } from "@/lib/api-client";
+import { apiFetch, refreshSession as refreshSessionShared, setAccessToken } from "@/lib/api-client";
 import type { UserRole } from "@/types";
 
 export interface LoggedUser {
@@ -36,20 +36,16 @@ export async function logout(): Promise<void> {
   }
 }
 
-/** POST /auth/refresh — usado pelo SessionProvider ao carregar a app,
- * para reidratar a sessão a partir do cookie httpOnly. */
+/** Reidrata a sessão a partir do cookie httpOnly (usado pelo
+ * SessionProvider ao carregar a app). Delega ao single-flight do
+ * api-client para não competir com os retries de 401. */
 export async function refreshSession(): Promise<LoggedUser | null> {
-  try {
-    const data = await apiFetch<LoginResponse>("/auth/refresh", {
-      method: "POST",
-      skipRefresh: true,
-    });
-    setAccessToken(data.accessToken);
-    return data.user;
-  } catch {
+  const data = await refreshSessionShared();
+  if (!data) {
     setAccessToken(null);
     return null;
   }
+  return data.user as LoggedUser;
 }
 
 /** RF-01 — "esqueci minha senha", passo 1. Sempre resolve (não vaza se o e-mail existe). */

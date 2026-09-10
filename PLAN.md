@@ -320,3 +320,39 @@ app/
 ## 9. Discovered Issues Log
 
 > _New issues must be appended here with a timestamp and brief context._
+
+---
+
+## 10. Fase 2 — Backend (execução)
+
+O backend foi implementado numa revisão posterior a este plano, sob a instrução do
+professor de usar **Node + TypeScript + PostgreSQL sem ORM** ("deixamos o Prisma para
+quando formos reestruturar"). O plano detalhado dessa fase está em
+`.claude/plans/hidden-imagining-lecun.md`; o resumo do que mudou e o estado atual:
+
+**Mudança estrutural vs. este PLAN.md:**
+- Não há Prisma (T002/T003 ficam para a fase de reestruturação). Acesso a dados =
+  `pg` + SQL puro em `server/src/modules/<ctx>/*.repository.ts`.
+- O backend é um **servidor Express separado em `server/`**, subindo junto com o front
+  via `concurrently` na raiz (`npm run dev`) — a regra "um comando só" segue valendo.
+- `db/schema.sql` é a fonte da verdade; `server/src/db/migrate.ts` aplica o arquivo
+  inteiro num banco limpo. Postgres local via `docker-compose.yml`.
+- Ver `decisoes.md` (seção "Fase 2 — Backend") para o porquê e os trade-offs.
+
+**Tickets B0–B8 (todos Done):**
+
+| Ticket | Entrega | Cobre |
+|---|---|---|
+| B0 | Scaffold `server/` (Express+TS+pg), Docker Compose, migrate/seed idempotentes, boot único, `app/src/lib/api-client.ts` | T001, T021 |
+| B1 | Auth real (login/refresh/logout/reset), JWT + refresh rotativo, `GET /users/me`, CRUD de staff | T004, T017 (parcial) |
+| B2 | `GET /journey-stages`, `/idea-areas`, `/cohorts` | T003 (dados de referência) |
+| B3 | `POST /teams` (cadastro público, find-or-create por e-mail, LGPD), board com filtros, `/teams/mine`, detalhe com escopo por papel, transição de etapa (RN-01), notas | T005, T006, T007, T008, T019 |
+| B4 | Templates, `POST/PATCH /tasks`, entregas com upload (multer) / link + versões, revisão, lembretes | T009, T010, T011, T012 (parcial) |
+| B5 | `GET /audit-logs`, `GET /notifications/mine` | T018, T012 |
+| B6 | `GET /reports/dashboard?cohort=` (COUNT/GROUP BY) | T015 (RF-22); CSV (T016) segue client-side |
+| B7 | `server/src/jobs/scheduler.ts` — RN-04 (tarefas LATE) + RF-17 (lembretes devidos) | T013, T014 |
+| B8 | Revisão de escopo por papel, testes Vitest (RN-01, RN-04/RF-17, fluxo de auth), remoção dos mocks do front, docs | T017, T022, T023 |
+
+**Pendente / fora de escopo desta fase:** T024 (deploy hospedado) e T016 no backend
+(a exportação CSV já é client-side e foi mantida). RESEND (OQ1) continua atrás da
+interface `EmailSender` — hoje `ConsoleEmailSender` (loga + grava `email_notifications`).

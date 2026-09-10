@@ -86,3 +86,33 @@ Próximo entregável: interface completa (sem fluxos cadastrais/listagem com dad
 **Entregue:** [`docs/frontend-plan.md`](docs/frontend-plan.md) — design system (paleta de cores, tipografia), escopo de telas mapeado às RF-01 a RF-24, arquitetura da camada de mocks/services (pensada para integração futura com o backend real) e backlog de 17 tickets (T-FE-01 a T-FE-17).
 
 **Decisão — reorganização de pastas:** ao montar o setup (T-FE-01), a aplicação Next.js inteira (package.json, src/, prisma/) foi movida para `app/` na raiz do repositório, em vez de ficar solta junto com `docs/`, `db/`, `decisoes.md` etc. Motivo: a raiz estava acumulando arquivos de natureza muito diferente (documentação acadêmica vs. código da aplicação) e ficaria pior conforme o projeto crescesse. A raiz ganhou um `package.json` mínimo que delega `npm run dev/build/lint` para dentro de `app/`, preservando a regra da disciplina de subir com um comando só a partir da raiz, sem back/front separados. Trade-off: um nível extra de indireção (a raiz não é mais o próprio projeto Next.js) — aceitável porque documentação e código continuam claramente separados.
+
+------
+
+## Fase 2 — Backend (revisão da decisão de ORM)
+
+Instrução do professor (Augusto Gehrke, 09/09): "Node, TypeScript e PostgreSQL. **Deixamos o ORM Prisma para quando formos reestruturar o projeto.**" Ou seja, a Fase 2 é implementada **sem ORM**.
+
+**01 — Usar ORM nesta fase?**
+Não. O Prisma continua planejado, mas só para a fase futura de reestruturação.
+
+**02 — O que usamos no lugar?**
+`pg` (node-postgres) + **SQL escrito à mão** em arquivos de repositório (`server/src/modules/<ctx>/*.repository.ts`). Sem query builder (Knex etc.) também — parâmetros posicionais (`$1, $2`) sempre, mapeamento `snake_case → camelCase` no `SELECT ... AS`.
+
+**03 — Por quê?**
+- É a instrução explícita do professor: o objetivo pedagógico da fase é escrever e enxergar o SQL, não abstraí-lo.
+- Dependência mínima e sem build step (`prisma generate`): o backend é só `tsx`/`tsc`.
+- Controle total sobre as queries agregadas do dashboard (`COUNT(*) FILTER`, `GROUP BY`) e sobre transações (rotação de refresh token, versionamento de entregas).
+- A camada `repository` isola 100% do SQL — quando o Prisma entrar, só esses arquivos mudam; `service`/`controller`/`routes` ficam intactos.
+
+**04 — Trade-off assumido**
+- Sem tipagem gerada do schema: os tipos das linhas (`*Row`) são escritos e mantidos à mão, e um `SELECT` divergente do tipo só quebra em runtime.
+- Sem migrations versionadas: o schema é aplicado por `server/src/db/migrate.ts` rodando `db/schema.sql` inteiro num banco limpo (`--reset`). Serve para desenvolvimento/demo, não para evolução incremental de um banco em produção.
+- Mais código repetitivo (todo `SELECT` lista colunas e faz o alias) e mais superfície para SQL injection se alguém interpolar valor em string — mitigado pela convenção "sempre `$n`" e pelos helpers em `shared/sql.ts`.
+- Boilerplate de mapear datas: o `pg` devolve `TIMESTAMPTZ`/`DATE` como string; a conversão para `Date` é feita na fronteira do frontend (`app/src/services/*`).
+
+**Arquitetura do `server/`:** servidor Express separado em `server/`, subindo junto com o front por um script `concurrently` na raiz (`npm run dev`) — mantém a regra "sobe com um comando só" sem fundir os dois processos. Postgres local via `docker-compose.yml`. Camadas por módulo: `routes → controller (zod) → service (regra de negócio, transações, auditoria, notificações) → repository (SQL puro)`.
+
+**Auth:** senha com `bcryptjs`; **access token** = JWT curto (~15 min), stateless, **não persistido**; **refresh token** = opaco (32 bytes), hash SHA-256 em `refresh_tokens`, rotacionado a cada uso (`revoked_at` + `replaced_by_id`), com detecção de reuso que derruba a cadeia toda; entregue em cookie `httpOnly` path `/auth`. Recuperação de senha em `password_reset_tokens` (uso único, 1h).
+
+**Jobs agendados** (RN-04, RF-17 automático): `setInterval` no próprio processo da API (`server/src/jobs/`), isolado de propósito — candidato a worker separado na reestruturação.

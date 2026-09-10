@@ -4,8 +4,11 @@ Sistema de acompanhamento da jornada do empreendedor no laboratório **InfoHub**
 
 Este repositório é o projeto prático da disciplina de **Arquitetura de Sistemas**, do curso de graduação em Sistemas de Informação. O sistema é construído de forma incremental ao longo da cadeira:
 
-- **Fase 1 (atual)** — o sistema é implementado como um **monolito**.
-- **Fases futuras** — trechos do monolito serão refatorados para arquiteturas mais avançadas (ex.: extrair notificações para um worker/fila separado, dividir módulos em serviços independentes), conforme o conteúdo da disciplina avançar. Cada evolução será documentada em `PLAN.md` e `decisoes.md`.
+- **Fase 1** — frontend Next.js completo com **dados mockados** numa camada `app/src/services/*`.
+- **Fase 2 (atual)** — backend real: **servidor Node (Express + TypeScript) em `server/`**, PostgreSQL acessado com **`pg` + SQL escrito à mão (sem ORM)** — decisão do professor: "deixamos o ORM Prisma para quando formos reestruturar o projeto". Cada módulo do backend substitui o `service` mockado correspondente por chamadas HTTP reais.
+- **Fases futuras** — reestruturação arquitetural (reintroduzir um ORM, extrair os jobs agendados para um worker/fila separado, dividir módulos em serviços). Cada evolução fica registrada em `PLAN.md` e `decisoes.md`.
+
+`app/prisma/schema.prisma` e `db/diagram.dbml` permanecem como artefatos de design para essa fase futura; **`db/schema.sql` é a fonte da verdade viva do schema.**
 
 ## Documentação
 
@@ -15,48 +18,79 @@ Este repositório é o projeto prático da disciplina de **Arquitetura de Sistem
 - [`PLAN.md`](PLAN.md) — plano de execução da Fase 1: visão geral, arquitetura, definição de pronto e backlog de tickets.
 - [`decisoes.md`](decisoes.md) — decisões de arquitetura registradas pela dupla (ex.: uso de ORM, stack de UI), conforme solicitado pelo professor.
 
-## Stack (Fase 1 — monolito)
+## Stack
 
+**Frontend (`app/`)**
 - **Next.js** (App Router) + **TypeScript**
 - **Tailwind CSS + shadcn/ui** na camada de interface
-- **Prisma** como ORM, sobre **PostgreSQL** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
-- Deploy alvo: Vercel + Postgres gerenciado
+- `app/src/lib/api-client.ts` é a única fronteira HTTP; `app/src/services/*` chamam a API real
+
+**Backend (`server/`)**
+- **Node + Express 5 + TypeScript** (ESM, `tsx` em dev)
+- **PostgreSQL** via **`pg` (node-postgres) + SQL puro** — **sem ORM, sem query builder** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
+- Auth: `bcryptjs` + JWT de acesso curto (stateless) + refresh token opaco rotativo em cookie `httpOnly`
+- Upload de entregas: `multer` em disco (`server/uploads/`), servido em `/uploads`
+- Jobs agendados (RN-04, lembretes) num `setInterval` no próprio processo — `server/src/jobs/`
+- Validação de entrada: `zod`; testes: `vitest` + `supertest`
 
 ## Estrutura do repositório
 
-A aplicação Next.js inteira (front + back, um único deploy — regra da disciplina) vive em `app/`. A raiz do repositório fica reservada para documentação e artefatos que não são código da aplicação (requisitos, modelagem de banco, decisões), evitando misturar tudo solto num só nível.
-
 ```
-app/                # aplicação Next.js completa (monolito)
+app/                # frontend Next.js
   src/
-    app/              # Next.js App Router — páginas e rotas (público, aluno, admin)
-    modules/          # Núcleo de domínio por contexto: auth, teams, journey, tasks, files, notifications, reports, audit
-    infra/            # Integrações técnicas: banco (Prisma), e-mail, storage
-    shared/           # Tipos e utilitários compartilhados
-    components/       # Componentes de UI (ui/ = shadcn, <domínio>/ = componentes de negócio)
-    services/         # Camada de acesso a dados (mock hoje, API/Prisma depois — ver docs/frontend-plan.md)
-  prisma/             # schema.prisma, migrations
-  package.json
-db/                 # DDL (schema.sql) e DER (diagram.dbml) de referência
-docs/               # documentação (requisitos, modelagem de banco, plano de frontend)
-assets/             # logotipo e outros ativos de marca
-package.json        # raiz — delega os scripts pra app/ (ver "Como rodar")
+    app/              # App Router — páginas (público, aluno, admin)
+    components/       # UI (ui/ = shadcn, <domínio>/ = componentes de negócio)
+    services/         # camada de acesso a dados — chamam a API real via lib/api-client
+    lib/              # api-client (fronteira HTTP), session, helpers
+    types/            # contratos compartilhados com o backend
+  prisma/             # schema.prisma — artefato de design (não usado em runtime)
+server/               # backend Express + pg (sem ORM)
+  src/
+    modules/<ctx>/    # auth, users, reference, teams, tasks, notifications, audit, reports
+                      #   cada um: routes -> controller (zod) -> service (regra) -> repository (SQL puro)
+    middleware/       # auth (JWT), requireRole, errorHandler
+    jobs/             # scheduler (RN-04 + lembretes) + rules puras (testadas)
+    db/               # pool, migrate.ts (aplica db/schema.sql), seed.ts
+    shared/           # errors, sql (query/one/tx)
+db/                   # schema.sql (FONTE DA VERDADE), diagram.dbml
+docker-compose.yml    # Postgres 16 local
+docs/                 # requisitos, modelagem de banco, plano de frontend
+package.json          # raiz — orquestra app + server + scripts de banco
 ```
-
-A separação em `modules/`/`services/` por contexto de negócio existe propositalmente para facilitar a evolução arquitetural nas próximas fases da disciplina.
 
 ## Como rodar (setup local)
 
-O `package.json` da raiz delega para `app/`, então o projeto sobe com um comando só a partir da raiz (regra da disciplina: sem back e front separados):
+Pré-requisitos: **Node 20+** e **Docker** (para o Postgres).
 
 ```bash
-npm run install:app     # instala as dependências dentro de app/ (equivalente a cd app && npm install)
-cp app/.env.example app/.env   # configurar conexão com Postgres, e-mail e storage (quando existir)
-npm run dev              # delega para "next dev" dentro de app/
+npm run install:all          # instala dependências da raiz, de app/ e de server/
+cp server/.env.example server/.env
+cp app/.env.local.example app/.env.local
+
+npm run db:up                # sobe o Postgres no Docker (porta 5432)
+npm run db:reset             # aplica db/schema.sql num banco limpo
+npm run db:seed              # popula dados de demo (todas as contas: senha "senha123")
+#   atalho: npm run db:setup  = db:up + db:reset + db:seed
+
+npm run dev                  # sobe front (:3000) e API (:3333) juntos (concurrently)
 ```
 
-Demais scripts disponíveis na raiz: `npm run build`, `npm run start`, `npm run lint` — todos delegam para `app/`.
+Contas do seed: `ana.souza@infohub.amf.br` (admin), `fernanda.ribeiro@infohub.amf.br` (mentor), `joao.alves@acad.amf.br` (aluno).
+
+Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), `npm run typecheck` / `npm test` (server), `npm run db:down`.
+
+### Testes
+
+```bash
+cd server && npm test        # vitest: regras do funil (RN-01), jobs (RN-04/RF-17), fluxo de auth
+```
+
+O teste de auth é de integração e usa o banco populado — rode `npm run db:setup` antes.
+
+### Jobs agendados
+
+`server/src/jobs/scheduler.ts` roda dentro do processo da API (`setInterval`, 5 min): marca tarefas vencidas como `LATE` (RN-04) e dispara lembretes cuja data chegou (RF-17). É um módulo isolado de propósito — candidato natural a virar um worker separado na fase de reestruturação.
 
 ## Status
 
-Em planejamento — ver o backlog de tickets em [`PLAN.md`](PLAN.md) para o estado atual do desenvolvimento.
+Backend (Fase 2) implementado — ver o estado dos tickets B0–B8 em [`PLAN.md`](PLAN.md).

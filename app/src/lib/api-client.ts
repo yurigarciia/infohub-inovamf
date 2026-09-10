@@ -63,19 +63,46 @@ async function rawFetch(path: string, opts: ApiFetchOptions): Promise<Response> 
   });
 }
 
-async function refreshOnce(): Promise<boolean> {
+export interface RefreshResult {
+  accessToken: string;
+  user: { id: string; name: string; email: string; role: string };
+}
+
+/** Refresh em andamento — compartilhado entre chamadas concorrentes.
+ * Sem isso, dois 401 simultâneos (ou o refresh do SessionProvider ao
+ * montar + um loader de tela) disparam dois POST /auth/refresh: o
+ * segundo reapresenta um refresh token já rotacionado e o backend, que
+ * trata reuso como roubo, derruba a sessão inteira. */
+let inFlightRefresh: Promise<RefreshResult | null> | null = null;
+
+async function doRefresh(): Promise<RefreshResult | null> {
   try {
     const res = await rawFetch("/auth/refresh", { method: "POST", skipRefresh: true });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { accessToken?: string };
-    if (data.accessToken) {
+    if (!res.ok) return null;
+    const data = (await res.json()) as Partial<RefreshResult>;
+    if (data.accessToken && data.user) {
       accessToken = data.accessToken;
-      return true;
+      return { accessToken: data.accessToken, user: data.user };
     }
-    return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** Renova o access token a partir do cookie de refresh. Single-flight:
+ * chamadas concorrentes recebem a mesma Promise. */
+export function refreshSession(): Promise<RefreshResult | null> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = doRefresh().finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
+async function refreshOnce(): Promise<boolean> {
+  return (await refreshSession()) !== null;
 }
 
 export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Promise<T> {
