@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { AppError } from "../shared/errors.js";
 import { isProd } from "../config/env.js";
@@ -28,6 +29,15 @@ export function errorHandler(
         fields: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
       },
     });
+    return;
+  }
+
+  if (err instanceof MulterError) {
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Arquivo acima do limite permitido."
+        : "Falha no upload do arquivo.";
+    res.status(400).json({ error: { code: "UPLOAD", message } });
     return;
   }
 

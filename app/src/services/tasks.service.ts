@@ -1,18 +1,10 @@
-// Camada de acesso a tarefas e entregas. Hoje lê/escreve nos mocks em
-// memória; amanhã troca para Prisma/API sem mudar as assinaturas (ver
-// docs/frontend-plan.md, Seção 4.1).
+// Camada de acesso a tarefas, entregas, revisão e lembretes (B4). Fala
+// com o backend (server/) via api-client; as telas que importam de
+// @/services não mudam. Datas chegam como ISO string / DATE e são
+// convertidas para Date aqui na fronteira.
 
-import {
-  MOCK_TASK_REMINDERS,
-  MOCK_TASK_SUBMISSIONS,
-  MOCK_TASK_TEMPLATES,
-  MOCK_TASKS,
-  MOCK_TEAM_MEMBERS,
-  MOCK_TEAMS,
-  MOCK_USERS,
-} from "@/mocks/data";
-import { generateId } from "@/mocks/utils";
-import { ReviewStatus, TaskStatus, UserRole } from "@/types";
+import { apiFetch } from "@/lib/api-client";
+import { ReviewStatus } from "@/types";
 import type {
   Task,
   TaskReminder,
@@ -21,65 +13,133 @@ import type {
   TaskTemplate,
   TaskWithDetails,
   TaskWithTeam,
+  User,
 } from "@/types";
-import { recordAuditLog } from "./audit.service";
-import { delay } from "./latency";
-import { recordNotification } from "./notifications.service";
 
-function toSubmissionWithUsers(submission: TaskSubmission): TaskSubmissionWithUsers {
-  const submittedBy = MOCK_USERS.find((u) => u.id === submission.submittedById);
-  if (!submittedBy) throw new Error(`Usuário ${submission.submittedById} não encontrado.`);
-  const reviewedBy = submission.reviewedById
-    ? (MOCK_USERS.find((u) => u.id === submission.reviewedById) ?? null)
-    : null;
-  return { ...submission, submittedBy, reviewedBy };
+// --- shapes crus da API -------------------------------------------
+
+interface RawUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: User["role"];
+  isActive: boolean;
+  lgpdConsentedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+interface RawTask {
+  id: string;
+  teamId: string;
+  stageId: number;
+  templateId: string | null;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  status: Task["status"];
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+interface RawSubmission {
+  id: string;
+  taskId: string;
+  submittedById: string;
+  fileUrl: string;
+  isExternalLink: boolean;
+  version: number;
+  isCurrent: boolean;
+  submittedAt: string;
+  reviewStatus: TaskSubmission["reviewStatus"];
+  reviewComment: string | null;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  submittedBy: RawUser;
+  reviewedBy: RawUser | null;
+}
+interface RawReminder {
+  id: string;
+  taskId: string;
+  remindAt: string;
+  isManual: boolean;
+  sent: boolean;
+  sentAt: string | null;
+  createdAt: string;
+}
+interface RawTaskDetails extends RawTask {
+  submissions: RawSubmission[];
+  reminders: RawReminder[];
+}
+interface RawTaskWithTeam extends RawTaskDetails {
+  team: { id: string; ideaName: string };
 }
 
-function toTaskWithDetails(task: Task): TaskWithDetails {
-  const submissions = MOCK_TASK_SUBMISSIONS.filter((s) => s.taskId === task.id)
-    .map(toSubmissionWithUsers)
-    .sort((a, b) => b.version - a.version);
-  const reminders = MOCK_TASK_REMINDERS.filter((r) => r.taskId === task.id).sort(
-    (a, b) => a.remindAt.getTime() - b.remindAt.getTime(),
-  );
-  return { ...task, submissions, reminders };
-}
+// --- conversão --------------------------------------------------
 
-/** Página de detalhe da equipe (RF-08) e lista de tarefas por equipe. */
+const toUser = (u: RawUser): User => ({
+  ...u,
+  lgpdConsentedAt: u.lgpdConsentedAt ? new Date(u.lgpdConsentedAt) : null,
+  createdAt: new Date(u.createdAt),
+  updatedAt: new Date(u.updatedAt),
+});
+
+const toTask = (t: RawTask): Task => ({
+  ...t,
+  dueDate: new Date(t.dueDate),
+  createdAt: new Date(t.createdAt),
+  updatedAt: new Date(t.updatedAt),
+});
+
+const toSubmission = (s: RawSubmission): TaskSubmissionWithUsers => ({
+  ...s,
+  submittedAt: new Date(s.submittedAt),
+  reviewedAt: s.reviewedAt ? new Date(s.reviewedAt) : null,
+  submittedBy: toUser(s.submittedBy),
+  reviewedBy: s.reviewedBy ? toUser(s.reviewedBy) : null,
+});
+
+const toReminder = (r: RawReminder): TaskReminder => ({
+  ...r,
+  remindAt: new Date(r.remindAt),
+  sentAt: r.sentAt ? new Date(r.sentAt) : null,
+  createdAt: new Date(r.createdAt),
+});
+
+const toDetails = (t: RawTaskDetails): TaskWithDetails => ({
+  ...toTask(t),
+  submissions: t.submissions.map(toSubmission),
+  reminders: t.reminders.map(toReminder),
+});
+
+const toDateOnly = (d: Date): string => d.toISOString().slice(0, 10);
+
+// --- leitura ---------------------------------------------------
+
+/** Tarefas de uma equipe, com entregas e lembretes (RF-08/13). */
 export async function getTasksForTeam(teamId: string): Promise<TaskWithDetails[]> {
-  await delay();
-  return MOCK_TASKS.filter((t) => t.teamId === teamId).map(toTaskWithDetails);
+  const rows = await apiFetch<RawTaskDetails[]>(`/teams/${teamId}/tasks`);
+  return rows.map(toDetails);
 }
 
-/** Área do aluno — tarefas de todas as equipes que ele integra (RF-13),
- * já que um aluno pode participar de mais de uma equipe (Q4). */
-export async function getTasksForStudent(userId: string): Promise<TaskWithTeam[]> {
-  await delay();
-  const teamIds = new Set(
-    MOCK_TEAM_MEMBERS.filter((m) => m.userId === userId).map((m) => m.teamId),
-  );
-  return MOCK_TASKS.filter((t) => teamIds.has(t.teamId)).map((task) => {
-    const team = MOCK_TEAMS.find((t) => t.id === task.teamId);
-    if (!team) throw new Error(`Equipe ${task.teamId} não encontrada.`);
-    return { ...toTaskWithDetails(task), team: { id: team.id, ideaName: team.ideaName } };
-  });
+/** Área do aluno — tarefas de todas as equipes que ele integra (RF-13).
+ * O backend usa o token; o parâmetro fica só pela compatibilidade. */
+export async function getTasksForStudent(_userId?: string): Promise<TaskWithTeam[]> {
+  void _userId;
+  const rows = await apiFetch<RawTaskWithTeam[]>("/tasks/mine");
+  return rows.map((t) => ({ ...toDetails(t), team: t.team }));
 }
 
-export async function getTaskDetail(taskId: string): Promise<TaskWithDetails> {
-  await delay();
-  const task = MOCK_TASKS.find((t) => t.id === taskId);
-  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
-  return toTaskWithDetails(task);
-}
-
-/** Modelos de tarefa pré-configurados por etapa (RF-11). Sem `stageId`,
- * devolve todos — usado pelo admin ao escolher um template na criação. */
+/** Modelos de tarefa por etapa (RF-11). */
 export async function getTaskTemplates(stageId?: number): Promise<TaskTemplate[]> {
-  await delay();
-  return stageId === undefined
-    ? [...MOCK_TASK_TEMPLATES]
-    : MOCK_TASK_TEMPLATES.filter((t) => t.stageId === stageId);
+  const suffix = stageId === undefined ? "" : `?stageId=${stageId}`;
+  const rows = await apiFetch<{ id: string; stageId: number; title: string; description: string | null; createdAt: string }[]>(
+    `/task-templates${suffix}`,
+  );
+  return rows.map((r) => ({ ...r, createdAt: new Date(r.createdAt) }));
 }
+
+// --- criação / edição (RF-11/12) ------------------------------
 
 export interface CreateTaskInput {
   teamId: string;
@@ -88,40 +148,18 @@ export interface CreateTaskInput {
   title: string;
   description?: string;
   dueDate: Date;
-  createdById: string;
+  createdById?: string;
 }
 
-/** RF-11, RF-12: cria uma tarefa avulsa ou a partir de um template. */
 export async function createTask(input: CreateTaskInput): Promise<Task> {
-  await delay();
-  const now = new Date();
-  const task: Task = {
-    id: generateId("task"),
-    teamId: input.teamId,
-    stageId: input.stageId,
-    templateId: input.templateId ?? null,
-    title: input.title,
-    description: input.description ?? null,
-    dueDate: input.dueDate,
-    status: TaskStatus.PENDING,
-    createdById: input.createdById,
-    createdAt: now,
-    updatedAt: now,
-  };
-  MOCK_TASKS.push(task);
-
-  const members = MOCK_TEAM_MEMBERS.filter((m) => m.teamId === input.teamId);
-  for (const member of members) {
-    await recordNotification({
-      recipientUserId: member.userId,
-      type: "TASK_ASSIGNED",
-      subject: `Nova tarefa: ${task.title}`,
-      relatedTeamId: task.teamId,
-      relatedTaskId: task.id,
-    });
-  }
-
-  return task;
+  const { createdById: _drop, dueDate, ...rest } = input;
+  void _drop;
+  return toTask(
+    await apiFetch<RawTask>("/tasks", {
+      method: "POST",
+      body: { ...rest, dueDate: toDateOnly(dueDate) },
+    }),
+  );
 }
 
 export interface UpdateTaskInput {
@@ -131,173 +169,79 @@ export interface UpdateTaskInput {
   dueDate?: Date;
 }
 
-/** RF-12: editar prazo/descrição/título de uma tarefa já criada. */
 export async function updateTask(input: UpdateTaskInput): Promise<Task> {
-  await delay();
-  const task = MOCK_TASKS.find((t) => t.id === input.taskId);
-  if (!task) throw new Error(`Tarefa ${input.taskId} não encontrada.`);
-
-  if (input.title !== undefined) task.title = input.title;
-  if (input.description !== undefined) task.description = input.description;
-  if (input.dueDate !== undefined) task.dueDate = input.dueDate;
-  task.updatedAt = new Date();
-
-  return task;
+  const { taskId, dueDate, ...rest } = input;
+  return toTask(
+    await apiFetch<RawTask>(`/tasks/${taskId}`, {
+      method: "PATCH",
+      body: { ...rest, ...(dueDate ? { dueDate: toDateOnly(dueDate) } : {}) },
+    }),
+  );
 }
+
+// --- entrega (RF-14/16) --------------------------------------
 
 export interface SubmitTaskInput {
   taskId: string;
-  submittedById: string;
-  fileUrl: string;
-  isExternalLink: boolean;
+  submittedById?: string;
+  /** upload de arquivo (PDF/imagem/vídeo) */
+  file?: File;
+  /** link externo — Pitch Vídeo (Q3) */
+  externalLink?: string;
+  /** compat: algumas telas ainda passam isExternalLink explicitamente */
+  isExternalLink?: boolean;
+  /** compat antigo: URL já resolvida (ignorada se `file`/`externalLink` vierem) */
+  fileUrl?: string;
 }
 
-/** RF-14: envio de entrega (arquivo ou link — Q3 no caso do Pitch Vídeo).
- * RF-16: mantém as versões anteriores, marcando só a nova como atual. */
 export async function submitTask(input: SubmitTaskInput): Promise<TaskSubmission> {
-  const task = MOCK_TASKS.find((t) => t.id === input.taskId);
-  if (!task) throw new Error(`Tarefa ${input.taskId} não encontrada.`);
-
-  await delay();
-  const now = new Date();
-
-  const previousSubmissions = MOCK_TASK_SUBMISSIONS.filter((s) => s.taskId === input.taskId);
-  for (const previous of previousSubmissions) previous.isCurrent = false;
-  const nextVersion = previousSubmissions.length
-    ? Math.max(...previousSubmissions.map((s) => s.version)) + 1
-    : 1;
-
-  const submission: TaskSubmission = {
-    id: generateId("sub"),
-    taskId: input.taskId,
-    submittedById: input.submittedById,
-    fileUrl: input.fileUrl,
-    isExternalLink: input.isExternalLink,
-    version: nextVersion,
-    isCurrent: true,
-    submittedAt: now,
-    reviewStatus: ReviewStatus.PENDING,
-    reviewComment: null,
-    reviewedById: null,
-    reviewedAt: null,
-  };
-  MOCK_TASK_SUBMISSIONS.push(submission);
-
-  task.status = TaskStatus.SUBMITTED;
-  task.updatedAt = now;
-
-  const admins = MOCK_USERS.filter((u) => u.role === UserRole.ADMIN);
-  for (const admin of admins) {
-    await recordNotification({
-      recipientUserId: admin.id,
-      type: "FILE_SUBMITTED",
-      subject: `Novo arquivo entregue: ${task.title}`,
-      relatedTeamId: task.teamId,
-      relatedTaskId: task.id,
-    });
+  const path = `/tasks/${input.taskId}/submissions`;
+  if (input.file) {
+    const form = new FormData();
+    form.append("file", input.file);
+    return toSubmission(await apiFetch<RawSubmission>(path, { method: "POST", body: form }));
   }
-
-  return submission;
+  const link = input.externalLink ?? input.fileUrl;
+  if (!link) throw new Error("Envie um arquivo ou um link.");
+  return toSubmission(
+    await apiFetch<RawSubmission>(path, { method: "POST", body: { externalLink: link } }),
+  );
 }
+
+// --- revisão (RF-15) ----------------------------------------
 
 export interface ReviewSubmissionInput {
   submissionId: string;
-  reviewedById: string;
+  reviewedById?: string;
   decision: typeof ReviewStatus.APPROVED | typeof ReviewStatus.REJECTED;
   reviewComment?: string;
 }
 
-/** RF-15: aprovar (conclui a tarefa) ou reprovar (reabre com comentário). */
 export async function reviewSubmission(input: ReviewSubmissionInput): Promise<TaskSubmission> {
-  const submission = MOCK_TASK_SUBMISSIONS.find((s) => s.id === input.submissionId);
-  if (!submission) throw new Error(`Entrega ${input.submissionId} não encontrada.`);
-  const task = MOCK_TASKS.find((t) => t.id === submission.taskId);
-  if (!task) throw new Error(`Tarefa ${submission.taskId} não encontrada.`);
-
-  await delay();
-  const now = new Date();
-
-  submission.reviewStatus = input.decision;
-  submission.reviewComment = input.reviewComment ?? null;
-  submission.reviewedById = input.reviewedById;
-  submission.reviewedAt = now;
-
-  task.status = input.decision === ReviewStatus.APPROVED ? TaskStatus.APPROVED : TaskStatus.REJECTED;
-  task.updatedAt = now;
-
-  await recordNotification({
-    recipientUserId: submission.submittedById,
-    type: input.decision === ReviewStatus.APPROVED ? "SUBMISSION_APPROVED" : "SUBMISSION_REJECTED",
-    subject:
-      input.decision === ReviewStatus.APPROVED
-        ? `Entrega aprovada: ${task.title}`
-        : `Ajustes solicitados: ${task.title}`,
-    relatedTeamId: task.teamId,
-    relatedTaskId: task.id,
-  });
-
-  await recordAuditLog({
-    actorUserId: input.reviewedById,
-    entityType: "task_submission",
-    entityId: submission.id,
-    action: input.decision === ReviewStatus.APPROVED ? "SUBMISSION_APPROVED" : "SUBMISSION_REJECTED",
-    metadata: { taskId: task.id, reviewComment: submission.reviewComment ?? undefined },
-  });
-
-  return submission;
+  return toSubmission(
+    await apiFetch<RawSubmission>(`/submissions/${input.submissionId}/review`, {
+      method: "POST",
+      body: { decision: input.decision, reviewComment: input.reviewComment },
+    }),
+  );
 }
 
-/** RF-17: configura uma data de lembrete automático para a tarefa. O
- * disparo em si (varrer tarefas e enviar quando a data chegar) é
- * trabalho de um job/worker no backend real — fora do escopo do
- * frontend mockado, que só registra a configuração. */
+// --- lembretes (RF-17/20) ---------------------------------
+
 export async function configureReminder(taskId: string, remindAt: Date): Promise<TaskReminder> {
-  await delay();
-  const task = MOCK_TASKS.find((t) => t.id === taskId);
-  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
-
-  const reminder: TaskReminder = {
-    id: generateId("reminder"),
-    taskId,
-    remindAt,
-    isManual: false,
-    sent: false,
-    sentAt: null,
-    createdAt: new Date(),
-  };
-  MOCK_TASK_REMINDERS.push(reminder);
-  return reminder;
+  return toReminder(
+    await apiFetch<RawReminder>(`/tasks/${taskId}/reminders`, {
+      method: "POST",
+      body: { remindAt: remindAt.toISOString() },
+    }),
+  );
 }
 
-/** RF-20: lembrete manual avulso, disparado na hora pelo admin/mentor
- * para uma equipe específica. */
 export async function sendManualReminder(taskId: string): Promise<TaskReminder> {
-  await delay();
-  const task = MOCK_TASKS.find((t) => t.id === taskId);
-  if (!task) throw new Error(`Tarefa ${taskId} não encontrada.`);
-
-  const now = new Date();
-  const reminder: TaskReminder = {
-    id: generateId("reminder"),
-    taskId,
-    remindAt: now,
-    isManual: true,
-    sent: true,
-    sentAt: now,
-    createdAt: now,
-  };
-  MOCK_TASK_REMINDERS.push(reminder);
-
-  const members = MOCK_TEAM_MEMBERS.filter((m) => m.teamId === task.teamId);
-  for (const member of members) {
-    await recordNotification({
-      recipientUserId: member.userId,
-      type: "MANUAL_REMINDER",
-      subject: `Lembrete: ${task.title}`,
-      relatedTeamId: task.teamId,
-      relatedTaskId: task.id,
-    });
-  }
-
-  return reminder;
+  return toReminder(
+    await apiFetch<RawReminder>(`/tasks/${taskId}/reminders`, {
+      method: "POST",
+      body: { manual: true },
+    }),
+  );
 }

@@ -45,11 +45,13 @@ export function TaskSubmissionForm({
 
     setIsSubmitting(true);
     try {
-      const fileUrl = URL.createObjectURL(file);
-      await submitTask({ taskId, submittedById: studentId, fileUrl, isExternalLink: false });
+      await submitTask({ taskId, submittedById: studentId, file });
       onSubmitted();
+    } catch {
+      setError("Não foi possível enviar o arquivo. Tente novamente.");
     } finally {
       setIsSubmitting(false);
+      event.target.value = "";
     }
   }
 
@@ -63,9 +65,11 @@ export function TaskSubmissionForm({
     }
     setIsSubmitting(true);
     try {
-      await submitTask({ taskId, submittedById: studentId, fileUrl: linkValue, isExternalLink: true });
+      await submitTask({ taskId, submittedById: studentId, externalLink: linkValue });
       setLinkValue("");
       onSubmitted();
+    } catch {
+      setError("Não foi possível enviar o link. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }

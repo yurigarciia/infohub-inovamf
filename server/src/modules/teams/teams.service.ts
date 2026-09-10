@@ -20,7 +20,7 @@ import type {
 } from "./teams.repository.js";
 
 type Role = "ADMIN" | "MENTOR" | "STUDENT";
-interface Actor {
+export interface Actor {
   id: string;
   role: Role;
 }
@@ -75,7 +75,7 @@ async function decorate(teams: TeamRow[]): Promise<TeamBoardItem[]> {
 
 // --- controle de acesso (RNF-03) --------------------------------------
 
-async function assertCanSeeTeam(actor: Actor, teamId: string): Promise<TeamRow> {
+export async function assertCanSeeTeam(actor: Actor, teamId: string): Promise<TeamRow> {
   const team = await repo.getTeam(teamId);
   if (!team) throw new NotFoundError("Equipe não encontrada.");
   if (actor.role === "ADMIN") return team;
@@ -91,7 +91,7 @@ async function assertCanSeeTeam(actor: Actor, teamId: string): Promise<TeamRow> 
   return team;
 }
 
-async function assertCanManageTeam(actor: Actor, teamId: string): Promise<TeamRow> {
+export async function assertCanManageTeam(actor: Actor, teamId: string): Promise<TeamRow> {
   if (actor.role === "STUDENT") {
     throw new ForbiddenError("Somente mentor ou administrador pode alterar a equipe.");
   }
