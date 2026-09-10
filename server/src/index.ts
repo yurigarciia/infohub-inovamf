@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { closePool, pool } from "./db/pool.js";
+import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 
 async function main(): Promise<void> {
   // valida conexão ao banco antes de aceitar requisições
@@ -18,8 +19,12 @@ async function main(): Promise<void> {
     console.log(`InfoHub API ouvindo em http://localhost:${env.PORT}  (env: ${env.NODE_ENV})`);
   });
 
+  // RN-04 + RF-17 automático — varre tarefas atrasadas e lembretes devidos
+  startScheduler();
+
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`\n${signal} recebido — encerrando...`);
+    stopScheduler();
     server.close(async () => {
       await closePool();
       process.exit(0);
