@@ -12,6 +12,10 @@ out/
 
 # production
 build/
+dist/
+
+# backend (server/)
+server/uploads/
 
 # misc
 .DS_Store

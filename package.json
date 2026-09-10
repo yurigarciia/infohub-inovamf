@@ -2,12 +2,23 @@
   "name": "infohub-inovamf-repo",
   "version": "0.1.0",
   "private": true,
-  "description": "Repositorio raiz do InfoHub -> InovAMF. A aplicacao (Next.js) vive em app/; estes scripts delegam para la, para o projeto continuar subindo com um comando so a partir da raiz.",
+  "description": "Repositorio raiz do InfoHub -> InovAMF. O front (Next.js) vive em app/, o backend (Express + pg) vive em server/. Estes scripts orquestram os dois para o projeto continuar subindo com um comando so a partir da raiz.",
   "scripts": {
-    "dev": "npm --prefix app run dev",
-    "build": "npm --prefix app run build",
-    "start": "npm --prefix app run start",
+    "dev": "concurrently -n front,api -c cyan,magenta \"npm --prefix app run dev\" \"npm --prefix server run dev\"",
+    "build": "npm --prefix app run build && npm --prefix server run build",
+    "start": "concurrently -n front,api -c cyan,magenta \"npm --prefix app run start\" \"npm --prefix server run start\"",
     "lint": "npm --prefix app run lint",
-    "install:app": "npm --prefix app install"
+    "typecheck": "npm --prefix server run typecheck",
+    "test": "npm --prefix server test",
+    "install:all": "npm --prefix app install && npm --prefix server install",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migrate": "npm --prefix server run db:migrate",
+    "db:reset": "npm --prefix server run db:reset",
+    "db:seed": "npm --prefix server run db:seed",
+    "db:setup": "npm run db:up && npm --prefix server run db:reset && npm --prefix server run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

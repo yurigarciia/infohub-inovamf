@@ -1,0 +1,25 @@
+# Postgres local para o backend (Fase 2). Ver PLAN.md.
+#   npm run db:up      -> sobe o banco
+#   npm run db:migrate -> aplica db/schema.sql
+#   npm run db:seed    -> popula dados de demonstração
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: infohub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: infohub
+      POSTGRES_PASSWORD: infohub
+      POSTGRES_DB: infohub
+    ports:
+      - "5432:5432"
+    volumes:
+      - infohub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infohub -d infohub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  infohub-db-data:
