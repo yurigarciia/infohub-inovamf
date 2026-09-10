@@ -1,20 +1,8 @@
-import type { CookieOptions, Request, Response } from "express";
+import type { Request, Response } from "express";
 import { z } from "zod";
-import { isProd } from "../../config/env.js";
+import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from "./auth.cookie.js";
 import * as service from "./auth.service.js";
 import type { SessionContext } from "./auth.service.js";
-
-const REFRESH_COOKIE = "infohub_rt";
-
-function cookieOpts(expires: Date): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    path: "/auth", // só enviado para /auth/refresh e /auth/logout
-    expires,
-  };
-}
 
 function ctxOf(req: Request): SessionContext {
   return {
@@ -31,7 +19,7 @@ const loginSchema = z.object({
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = loginSchema.parse(req.body);
   const result = await service.login(email, password, ctxOf(req));
-  res.cookie(REFRESH_COOKIE, result.refreshToken, cookieOpts(result.refreshExpiresAt));
+  setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
   res.json({ accessToken: result.accessToken, user: result.user });
 }
 
@@ -42,13 +30,13 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
   const result = await service.refresh(raw, ctxOf(req));
-  res.cookie(REFRESH_COOKIE, result.refreshToken, cookieOpts(result.refreshExpiresAt));
+  setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
   res.json({ accessToken: result.accessToken, user: result.user });
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
   await service.logout(req.cookies?.[REFRESH_COOKIE] as string | undefined);
-  res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
+  clearRefreshCookie(res);
   res.status(204).end();
 }
 

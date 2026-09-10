@@ -44,6 +44,17 @@ async function issueSession(
   };
 }
 
+/**
+ * Emite uma sessão para um usuário já validado por outro fluxo — hoje,
+ * o cadastro de equipe (POST /teams) faz login automático do líder.
+ */
+export async function startSessionFor(
+  user: { id: string; name: string; email: string; role: UserRole },
+  ctx: SessionContext,
+): Promise<AuthResult> {
+  return issueSession(user, ctx);
+}
+
 /** RF-01 — login por e-mail + senha. */
 export async function login(
   email: string,

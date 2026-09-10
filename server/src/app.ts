@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { referenceRoutes } from "./modules/reference/reference.routes.js";
+import { teamsRoutes } from "./modules/teams/teams.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 
 /**
@@ -36,7 +37,8 @@ export function createApp(): Express {
   app.use("/auth", authRoutes); // RF-01
   app.use("/users", usersRoutes); // RF-03, /users/me
   app.use("/", referenceRoutes); // RF-04 — /journey-stages, /idea-areas, /cohorts
-  // teams, tasks, reports, audit, notifications entram nos próximos módulos (B3+)
+  app.use("/teams", teamsRoutes); // RF-02, RF-06..10, RN-01
+  // tasks, reports, audit, notifications entram nos próximos módulos (B4+)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

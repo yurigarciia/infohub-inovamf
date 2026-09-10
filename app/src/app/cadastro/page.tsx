@@ -24,7 +24,7 @@ import type { IdeaArea } from "@/types";
  * só orquestra o `react-hook-form` e o envio. */
 export default function CadastroPage() {
   const router = useRouter();
-  const { setUserId } = useSession();
+  const { hydrate } = useSession();
   const [areas, setAreas] = useState<IdeaArea[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -60,7 +60,7 @@ export default function CadastroPage() {
   async function onSubmit(values: CadastroFormValues) {
     setSubmitError(null);
     try {
-      const { leaderUserId } = await createTeamFromInscription({
+      await createTeamFromInscription({
         leader: {
           name: values.leaderName,
           email: values.leaderEmail,
@@ -76,7 +76,10 @@ export default function CadastroPage() {
         sourceOrigin: values.sourceOrigin || undefined,
         cohort: CURRENT_COHORT,
       });
-      await setUserId(leaderUserId);
+      // O POST /teams já autenticou o líder (access token em memória +
+      // cookie de refresh). hydrate() carrega o usuário na sessão antes
+      // de navegar para a área do aluno.
+      await hydrate();
       router.push("/aluno");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Não foi possível enviar o cadastro.");

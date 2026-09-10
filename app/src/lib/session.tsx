@@ -1,14 +1,10 @@
 "use client";
 
-// Sessão real (B1). No mount tenta reidratar a partir do cookie de
+// Sessão real (B1/B3). No mount tenta reidratar a partir do cookie de
 // refresh (httpOnly) via POST /auth/refresh; `signIn` faz login de
 // verdade e guarda o access token em memória (api-client). Os
 // componentes que consomem useSession() continuam lendo `user`,
 // `isLoading` e `signOut` como antes.
-//
-// `setUserId` ainda existe como atalho mockado, usado só pelo cadastro
-// de equipe para "entrar como o líder recém-criado" — sai quando B3
-// migrar teams.service para a API real.
 
 import {
   createContext,
@@ -22,17 +18,16 @@ import {
   logout as apiLogout,
   refreshSession as apiRefresh,
 } from "@/services/auth.service";
-import { getMe, listUsers } from "@/services";
+import { getMe } from "@/services";
 import type { User } from "@/types";
-
-const MOCK_STORAGE_KEY = "infohub:mock-session-user-id";
 
 interface SessionContextValue {
   user: User | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
-  /** @deprecated atalho mockado do cadastro de equipe — sai no B3. */
-  setUserId: (userId: string) => Promise<void>;
+  /** Reidrata a sessão a partir do access token já em memória — usado
+   * pelo cadastro de equipe, que autentica o líder via POST /teams. */
+  hydrate: () => Promise<User | null>;
   signOut: () => Promise<void>;
 }
 
@@ -66,20 +61,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return me;
   };
 
-  const setUserId = async (nextUserId: string) => {
-    window.localStorage.setItem(MOCK_STORAGE_KEY, nextUserId);
-    const users = await listUsers();
-    setUser(users.find((u) => u.id === nextUserId) ?? null);
+  const hydrate = async (): Promise<User | null> => {
+    const me = await getMe();
+    setUser(me);
+    return me;
   };
 
   const signOut = async () => {
-    window.localStorage.removeItem(MOCK_STORAGE_KEY);
     await apiLogout();
     setUser(null);
   };
 
   return (
-    <SessionContext.Provider value={{ user, isLoading, signIn, setUserId, signOut }}>
+    <SessionContext.Provider value={{ user, isLoading, signIn, hydrate, signOut }}>
       {children}
     </SessionContext.Provider>
   );

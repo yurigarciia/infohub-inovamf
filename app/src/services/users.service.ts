@@ -1,17 +1,9 @@
 // Camada de acesso a usuários. Fala com o backend (server/) via
 // api-client — ver docs/frontend-plan.md, Seção 4.1.
-//
-// findOrCreateStudentByEmail ainda é mock (usada pelo cadastro de
-// equipe — migra junto com teams.service).
 
-import { MOCK_STUDENT_PROFILES, MOCK_USERS } from "@/mocks/data";
-// listUsers continua mock — só o SessionProvider usa, no atalho de
-// "trocar de usuário" do cadastro de equipe (remove junto com B3).
-import { generateId } from "@/mocks/utils";
 import { apiFetch } from "@/lib/api-client";
 import { UserRole } from "@/types";
-import type { StudentProfile, StudentUser, User } from "@/types";
-import { delay } from "./latency";
+import type { StudentProfile, User } from "@/types";
 
 /** Converte o User serializado da API (datas em ISO string) para o
  * formato que as telas esperam (Date). */
@@ -113,65 +105,4 @@ export async function setStaffUserActive(
     body: { isActive },
   });
   return toUser(updated);
-}
-
-// ---------------------------------------------------------------------
-// Ainda mock — migra junto com teams.service (cadastro de equipe, B3).
-// ---------------------------------------------------------------------
-
-/** Mock — lista todos os usuários conhecidos. Usada só pelo
- * SessionProvider para o atalho de "logar como líder recém-criado" no
- * cadastro de equipe. Sai quando B3 migrar teams.service. */
-export async function listUsers(): Promise<User[]> {
-  await delay();
-  return [...MOCK_USERS];
-}
-
-export interface FindOrCreateStudentInput {
-  name: string;
-  email: string;
-  phone?: string;
-  course: string;
-  period: string;
-}
-
-async function findUserByEmailMock(email: string): Promise<User | null> {
-  await delay();
-  const normalized = email.trim().toLowerCase();
-  return MOCK_USERS.find((u) => u.email.toLowerCase() === normalized) ?? null;
-}
-
-export async function findOrCreateStudentByEmail(
-  input: FindOrCreateStudentInput,
-): Promise<StudentUser> {
-  const existing = await findUserByEmailMock(input.email);
-  if (existing) {
-    const profile = MOCK_STUDENT_PROFILES.find((sp) => sp.userId === existing.id) ?? null;
-    if (existing.role !== UserRole.STUDENT || !profile) {
-      throw new Error(`E-mail ${input.email} já está cadastrado com outro papel.`);
-    }
-    return { ...existing, role: UserRole.STUDENT, studentProfile: profile };
-  }
-
-  await delay();
-  const now = new Date();
-  const user: User = {
-    id: generateId("user-student"),
-    name: input.name,
-    email: input.email,
-    phone: input.phone ?? null,
-    role: UserRole.STUDENT,
-    isActive: true,
-    lgpdConsentedAt: now,
-    createdAt: now,
-    updatedAt: now,
-  };
-  const profile: StudentProfile = {
-    userId: user.id,
-    course: input.course,
-    period: input.period,
-  };
-  MOCK_USERS.push(user);
-  MOCK_STUDENT_PROFILES.push(profile);
-  return { ...user, role: UserRole.STUDENT, studentProfile: profile };
 }
