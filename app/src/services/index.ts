@@ -1,3 +1,4 @@
+export * from "./auth.service";
 export * from "./users.service";
 export * from "./journey.service";
 export * from "./teams.service";

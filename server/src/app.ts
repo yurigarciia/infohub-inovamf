@@ -4,6 +4,8 @@ import express, { type Express } from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
+import { usersRoutes } from "./modules/users/users.routes.js";
 
 /**
  * Monta o app Express (sem dar listen). Separado de index.ts para os
@@ -29,10 +31,10 @@ export function createApp(): Express {
     res.json({ status: "ok", service: "infohub-inovamf-server", ts: new Date().toISOString() });
   });
 
-  // --- rotas dos módulos entram aqui (B1+) ---
-  // app.use("/auth", authRoutes);
-  // app.use("/users", usersRoutes);
-  // ...
+  // --- rotas dos módulos ---
+  app.use("/auth", authRoutes); // RF-01
+  app.use("/users", usersRoutes); // RF-03, /users/me
+  // teams, tasks, reports, audit, notifications entram nos próximos módulos (B2+)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

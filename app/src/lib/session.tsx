@@ -1,76 +1,85 @@
 "use client";
 
-// Sessão mockada (T-FE-05): substitui o login real enquanto ele não
-// existe (T-FE-06). Guarda qual usuário está "logado" em localStorage,
-// e resolve o User completo via services/ (nunca importa mocks direto).
-// Quando o login real existir, este provider some e vira apenas o
-// resultado da autenticação de fato — os componentes que consomem
-// useSession() não precisam mudar.
+// Sessão real (B1). No mount tenta reidratar a partir do cookie de
+// refresh (httpOnly) via POST /auth/refresh; `signIn` faz login de
+// verdade e guarda o access token em memória (api-client). Os
+// componentes que consomem useSession() continuam lendo `user`,
+// `isLoading` e `signOut` como antes.
+//
+// `setUserId` ainda existe como atalho mockado, usado só pelo cadastro
+// de equipe para "entrar como o líder recém-criado" — sai quando B3
+// migrar teams.service para a API real.
 
 import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { listUsers } from "@/services";
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  refreshSession as apiRefresh,
+} from "@/services/auth.service";
+import { getMe, listUsers } from "@/services";
 import type { User } from "@/types";
 
-const STORAGE_KEY = "infohub:mock-session-user-id";
+const MOCK_STORAGE_KEY = "infohub:mock-session-user-id";
 
 interface SessionContextValue {
   user: User | null;
-  users: User[];
   isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<User>;
+  /** @deprecated atalho mockado do cadastro de equipe — sai no B3. */
   setUserId: (userId: string) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<User[]>([]);
-  const [userId, setUserIdState] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    listUsers().then((loaded) => {
+    (async () => {
+      const logged = await apiRefresh();
       if (cancelled) return;
-      setUsers(loaded);
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      const initial = stored && loaded.some((u) => u.id === stored) ? stored : null;
-      setUserIdState(initial);
-      setIsLoading(false);
-    });
+      if (logged) {
+        const me = await getMe();
+        if (!cancelled) setUser(me);
+      }
+      if (!cancelled) setIsLoading(false);
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const signIn = async (email: string, password: string): Promise<User> => {
+    await apiLogin(email, password);
+    const me = await getMe();
+    if (!me) throw new Error("Não foi possível carregar o usuário.");
+    setUser(me);
+    return me;
+  };
+
   const setUserId = async (nextUserId: string) => {
-    window.localStorage.setItem(STORAGE_KEY, nextUserId);
-    // A lista carregada no mount pode não ter uma conta criada depois
-    // (ex.: líder recém-cadastrado via /cadastro) — recarrega e só then
-    // atualiza o id, pra `user` já resolver de primeira (sem "piscar"
-    // como deslogado enquanto a lista atualiza). Quem chama pode `await`
-    // isso antes de navegar.
-    const refreshed = await listUsers();
-    setUsers(refreshed);
-    setUserIdState(nextUserId);
+    window.localStorage.setItem(MOCK_STORAGE_KEY, nextUserId);
+    const users = await listUsers();
+    setUser(users.find((u) => u.id === nextUserId) ?? null);
   };
 
-  const signOut = () => {
-    setUserIdState(null);
-    window.localStorage.removeItem(STORAGE_KEY);
+  const signOut = async () => {
+    window.localStorage.removeItem(MOCK_STORAGE_KEY);
+    await apiLogout();
+    setUser(null);
   };
-
-  const user = useMemo(() => users.find((u) => u.id === userId) ?? null, [users, userId]);
 
   return (
-    <SessionContext.Provider value={{ user, users, isLoading, setUserId, signOut }}>
+    <SessionContext.Provider value={{ user, isLoading, signIn, setUserId, signOut }}>
       {children}
     </SessionContext.Provider>
   );

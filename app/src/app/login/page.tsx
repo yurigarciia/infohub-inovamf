@@ -8,25 +8,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/lib/session";
-import { authenticateByEmail } from "@/services";
+import { requestPasswordReset } from "@/services";
+import { ApiError } from "@/lib/api-client";
 import { UserRole } from "@/types";
 import { DemoProfilePicker } from "./demo-profile-picker";
 
-/** RF-01: login (mock) com e-mail e senha, com opção de recuperação de
- * senha. Nesta fase a senha não é verificada de fato — só a existência
- * da conta pelo e-mail (ver services/users.service.authenticateByEmail). */
+/** RF-01: login real (B1) com e-mail e senha. A senha é verificada pelo
+ * backend (POST /auth/login); o refresh token vem em cookie httpOnly e
+ * o access token fica em memória (ver lib/api-client + services/auth). */
 export default function LoginPage() {
   const router = useRouter();
-  const { setUserId } = useSession();
+  const { signIn } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoverySent, setRecoverySent] = useState(false);
 
-  async function goToUserArea(user: { id: string; role: UserRole }) {
-    await setUserId(user.id);
-    router.push(user.role === UserRole.STUDENT ? "/aluno" : "/admin");
+  function goToUserArea(role: UserRole) {
+    router.push(role === UserRole.STUDENT ? "/aluno" : "/admin");
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -34,15 +36,25 @@ export default function LoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const user = await authenticateByEmail(email, password);
-      if (!user) {
-        setError("E-mail ou senha inválidos.");
-        return;
-      }
-      await goToUserArea(user);
+      const user = await signIn(email, password);
+      goToUserArea(user.role);
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Não foi possível entrar. Tente novamente.",
+      );
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleRecovery(event: FormEvent) {
+    event.preventDefault();
+    await requestPasswordReset(recoveryEmail || email);
+    setRecoverySent(true);
+  }
+
+  async function handleDemoPick(user: { role: UserRole }) {
+    goToUserArea(user.role);
   }
 
   return (
@@ -96,16 +108,34 @@ export default function LoginPage() {
             >
               Esqueci minha senha
             </button>
-            {showRecovery && (
-              <p className="text-xs text-muted-foreground">
-                Em produção, isso enviaria um e-mail de redefinição via Resend
-                (ver decisoes.md, Q7). Nesta fase de frontend mockado, a
-                senha não é verificada de fato.
-              </p>
-            )}
           </form>
 
-          <DemoProfilePicker onPick={goToUserArea} />
+          {showRecovery && (
+            <form className="mt-3 flex flex-col gap-2" onSubmit={handleRecovery}>
+              <Label htmlFor="recovery-email" className="text-xs text-muted-foreground">
+                Enviamos um link de redefinição para o e-mail informado, se houver conta.
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="recovery-email"
+                  type="email"
+                  placeholder="voce@exemplo.com"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                />
+                <Button type="submit" variant="outline">
+                  Enviar
+                </Button>
+              </div>
+              {recoverySent && (
+                <p className="text-xs text-muted-foreground">
+                  Se o e-mail existir, o link de redefinição foi enviado.
+                </p>
+              )}
+            </form>
+          )}
+
+          <DemoProfilePicker onPick={handleDemoPick} />
         </CardContent>
       </Card>
     </div>
