@@ -117,28 +117,49 @@ export async function logout(rawRefreshToken: string | undefined): Promise<void>
 }
 
 /**
- * RF-01 — "esqueci minha senha", passo 1. Gera um token de uso único e
- * "envia" por e-mail. Sempre retorna sem erro, exista o e-mail ou não
- * (não vaza quais e-mails estão cadastrados).
+ * Envia um link de definição de senha. Mesmo mecanismo do reset
+ * (`password_reset_tokens`, uso único), com validade e texto que variam
+ * conforme a intenção:
+ *  - "FIRST_ACCESS": conta recém-criada pelo cadastro de equipe, o
+ *    integrante ainda não tem senha — link vale 7 dias.
+ *  - "RESET": "esqueci minha senha" — link vale 1 hora.
+ */
+export async function sendPasswordSetupLink(
+  user: { id: string; name: string; email: string },
+  kind: "FIRST_ACCESS" | "RESET",
+): Promise<void> {
+  const rawToken = generateOpaqueToken();
+  const hours = kind === "FIRST_ACCESS" ? 24 * 7 : 1;
+  await repo.insertPasswordResetToken({
+    userId: user.id,
+    tokenHash: hashToken(rawToken),
+    expiresAt: new Date(Date.now() + hours * 60 * 60 * 1000),
+  });
+
+  const link = `${env.CORS_ORIGIN}/definir-senha?token=${rawToken}`;
+  await recordNotification({
+    recipientUserId: user.id,
+    type: "MANUAL_REMINDER", // não há tipo próprio no enum; reaproveitado
+    subject:
+      kind === "FIRST_ACCESS"
+        ? "Bem-vindo ao InfoHub — defina sua senha de acesso"
+        : "Redefinição de senha — InfoHub",
+    body:
+      kind === "FIRST_ACCESS"
+        ? `Olá, ${user.name}! Sua equipe foi cadastrada no InfoHub. Defina sua senha para acessar sua área (link válido por 7 dias): ${link}`
+        : `Recebemos um pedido de redefinição de senha. Use este link (válido por 1 hora): ${link}`,
+  });
+}
+
+/**
+ * RF-01 — "esqueci minha senha" / "primeiro acesso", passo 1. Sempre
+ * retorna sem erro, exista o e-mail ou não (não vaza quais e-mails
+ * estão cadastrados).
  */
 export async function requestPasswordReset(email: string): Promise<void> {
   const row = await repo.findUserByEmail(email);
   if (!row || !row.is_active) return;
-
-  const rawToken = generateOpaqueToken();
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
-  await repo.insertPasswordResetToken({
-    userId: row.id,
-    tokenHash: hashToken(rawToken),
-    expiresAt,
-  });
-
-  await recordNotification({
-    recipientUserId: row.id,
-    type: "MANUAL_REMINDER", // não há tipo próprio no enum; reaproveitado
-    subject: "Redefinição de senha — InfoHub",
-    body: `Use este token para redefinir sua senha (válido por 1 hora): ${rawToken}`,
-  });
+  await sendPasswordSetupLink({ id: row.id, name: row.name, email: row.email }, "RESET");
 }
 
 /** RF-01 — "esqueci minha senha", passo 2: troca a senha com o token. */

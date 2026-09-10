@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showRecovery, setShowRecovery] = useState(false);
+  const [helpMode, setHelpMode] = useState<null | "first-access" | "reset">(null);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
 
@@ -47,8 +47,15 @@ export default function LoginPage() {
     }
   }
 
+  function openHelp(mode: "first-access" | "reset") {
+    setHelpMode((cur) => (cur === mode ? null : mode));
+    setRecoverySent(false);
+  }
+
   async function handleRecovery(event: FormEvent) {
     event.preventDefault();
+    // Mesmo endpoint para os dois casos: o backend decide a validade e o
+    // texto do e-mail (7 dias no primeiro acesso, 1h no reset).
     await requestPasswordReset(recoveryEmail || email);
     setRecoverySent(true);
   }
@@ -101,19 +108,30 @@ export default function LoginPage() {
               {isSubmitting ? "Entrando…" : "Entrar"}
             </Button>
 
-            <button
-              type="button"
-              onClick={() => setShowRecovery((v) => !v)}
-              className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
-            >
-              Esqueci minha senha
-            </button>
+            <div className="flex justify-between text-sm">
+              <button
+                type="button"
+                onClick={() => openHelp("first-access")}
+                className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Primeiro acesso
+              </button>
+              <button
+                type="button"
+                onClick={() => openHelp("reset")}
+                className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
           </form>
 
-          {showRecovery && (
+          {helpMode && (
             <form className="mt-3 flex flex-col gap-2" onSubmit={handleRecovery}>
               <Label htmlFor="recovery-email" className="text-xs text-muted-foreground">
-                Enviamos um link de redefinição para o e-mail informado, se houver conta.
+                {helpMode === "first-access"
+                  ? "Você recebeu um e-mail de boas-vindas com um link para definir sua senha. Se não achou, informe seu e-mail para reenviar."
+                  : "Informe seu e-mail e enviaremos um link para redefinir a senha, se houver conta."}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -129,7 +147,7 @@ export default function LoginPage() {
               </div>
               {recoverySent && (
                 <p className="text-xs text-muted-foreground">
-                  Se o e-mail existir, o link de redefinição foi enviado.
+                  Se o e-mail existir, o link foi enviado. Confira sua caixa de entrada.
                 </p>
               )}
             </form>

@@ -7,7 +7,7 @@ import { ForbiddenError, NotFoundError } from "../../shared/errors.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { assertTransitionAllowed } from "../journey/journey.rules.js";
 import { recordNotification } from "../notifications/notifications.service.js";
-import { startSessionFor } from "../auth/auth.service.js";
+import { sendPasswordSetupLink, startSessionFor } from "../auth/auth.service.js";
 import type { AuthResult, SessionContext } from "../auth/auth.service.js";
 import * as ref from "../reference/reference.repository.js";
 import * as repo from "./teams.repository.js";
@@ -167,7 +167,14 @@ export async function createTeamFromInscription(
   input: CreateTeamInput,
   ctx: SessionContext,
 ): Promise<CreateTeamResult> {
+  // Senha placeholder: password_hash é NOT NULL, mas a conta nasce sem
+  // senha conhecível — o acesso vem pelo link de "primeiro acesso"
+  // (e-mail enviado abaixo). Um hash aleatório por request basta.
   const throwawayHash = await bcrypt.hash(randomBytes(18).toString("hex"), env.BCRYPT_ROUNDS);
+
+  // Contas criadas agora (não as que já existiam) recebem o convite de
+  // primeiro acesso depois que a transação fecha.
+  const newStudents: { id: string; name: string; email: string }[] = [];
 
   const resolveStudent = async (
     client: PoolClient,
@@ -183,15 +190,19 @@ export async function createTeamFromInscription(
       }
       return existing.id;
     }
-    return repo.insertStudent(client, {
-      name: person.name.trim(),
-      email: person.email.trim(),
+    const name = person.name.trim();
+    const email = person.email.trim();
+    const id = await repo.insertStudent(client, {
+      name,
+      email,
       phone: person.phone?.trim() || null,
       course: person.course.trim(),
       period: person.period.trim(),
       lgpdConsentedAt: isLeader && input.lgpdConsent ? new Date() : null,
       passwordHash: throwawayHash,
     });
+    newStudents.push({ id, name, email });
+    return id;
   };
 
   const { teamId, leaderUserId } = await tx(async (client) => {
@@ -228,6 +239,13 @@ export async function createTeamFromInscription(
     action: "TEAM_REGISTERED",
     metadata: { cohort: team.cohort, memberCount: input.members.length + 1 },
   });
+
+  // Primeiro acesso: quem foi criado agora recebe um link para definir
+  // a senha (o líder também — já entra logado, mas precisa de senha na
+  // próxima vez). Quem já tinha conta não recebe nada.
+  for (const student of newStudents) {
+    await sendPasswordSetupLink(student, "FIRST_ACCESS");
+  }
 
   for (const adminId of await repo.listAdminIds()) {
     await recordNotification({
