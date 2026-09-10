@@ -1,31 +1,23 @@
-// Camada de acesso ao funil de 6 etapas. A validação de transição
-// (RN-01) fica aqui; a mutação de fato (Team.currentStageId,
-// TeamStageHistory) fica em teams.service.ts, que chama esta validação
-// antes de aplicar.
+// Camada de acesso ao funil de 6 etapas. A leitura das etapas vem do
+// backend (B2, GET /journey-stages). A validação de transição (RN-01)
+// ainda é mock aqui — a mutação de fato (Team.currentStageId,
+// TeamStageHistory) fica em teams.service.ts e migra no B3.
 
 import { MOCK_JOURNEY_STAGES } from "@/mocks/data";
+import { apiFetch } from "@/lib/api-client";
 import type { JourneyStage } from "@/types";
 import { delay } from "./latency";
 
 export async function getJourneyStages(): Promise<JourneyStage[]> {
-  await delay();
-  return [...MOCK_JOURNEY_STAGES].sort((a, b) => a.number - b.number);
-}
-
-export async function getJourneyStageById(id: number): Promise<JourneyStage | null> {
-  await delay();
-  return MOCK_JOURNEY_STAGES.find((s) => s.id === id) ?? null;
+  return apiFetch<JourneyStage[]>("/journey-stages");
 }
 
 /**
  * RN-01: uma equipe só avança de etapa quando as tarefas obrigatórias
  * daquela etapa estiverem aprovadas, ou por decisão manual do
- * mentor/admin. Nesta fase (mock), qualquer transição para uma etapa
- * diferente da atual é permitida — a UI é responsável por sinalizar ao
- * mentor/admin quando há tarefas pendentes na etapa atual (RF-09
- * continua manual). A função existe como ponto único de validação para
- * quando a regra completa (checar tarefas obrigatórias) entrar no
- * backend real.
+ * mentor/admin. Continua mock nesta fase — migra junto com
+ * advanceTeamStage (teams.service) no B3, quando a regra completa
+ * (checar tarefas obrigatórias) entra no backend.
  */
 export async function canAdvanceToStage(
   fromStageId: number,
@@ -33,6 +25,5 @@ export async function canAdvanceToStage(
 ): Promise<boolean> {
   await delay(50);
   if (toStageId === fromStageId) return false;
-  const stages = MOCK_JOURNEY_STAGES.map((s) => s.id);
-  return stages.includes(toStageId);
+  return MOCK_JOURNEY_STAGES.some((s) => s.id === toStageId);
 }

@@ -15,6 +15,7 @@ import {
   MOCK_USERS,
 } from "@/mocks/data";
 import { generateId } from "@/mocks/utils";
+import { apiFetch } from "@/lib/api-client";
 import { IdeaMaturity, TeamMemberRole, UserRole } from "@/types";
 import type {
   IdeaArea,
@@ -34,15 +35,14 @@ import { recordNotification } from "./notifications.service";
 import { findOrCreateStudentByEmail } from "./users.service";
 
 export async function getIdeaAreas(): Promise<IdeaArea[]> {
-  await delay();
-  return [...MOCK_IDEA_AREAS];
+  const rows = await apiFetch<{ id: number; name: string; createdAt: string }[]>("/idea-areas");
+  return rows.map((r) => ({ ...r, createdAt: new Date(r.createdAt) }));
 }
 
 /** Turmas/semestres com pelo menos uma equipe — para o filtro por
  * período (RF-24). Ordenado do mais recente para o mais antigo. */
 export async function getCohorts(): Promise<string[]> {
-  await delay();
-  return [...new Set(MOCK_TEAMS.map((t) => t.cohort))].sort((a, b) => b.localeCompare(a));
+  return apiFetch<string[]>("/cohorts");
 }
 
 /** Para cada aluno com pelo menos uma equipe, indica se ele é líder em

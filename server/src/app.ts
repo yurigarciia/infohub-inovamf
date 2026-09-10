@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { referenceRoutes } from "./modules/reference/reference.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 
 /**
@@ -34,7 +35,8 @@ export function createApp(): Express {
   // --- rotas dos módulos ---
   app.use("/auth", authRoutes); // RF-01
   app.use("/users", usersRoutes); // RF-03, /users/me
-  // teams, tasks, reports, audit, notifications entram nos próximos módulos (B2+)
+  app.use("/", referenceRoutes); // RF-04 — /journey-stages, /idea-areas, /cohorts
+  // teams, tasks, reports, audit, notifications entram nos próximos módulos (B3+)
 
   app.use(notFoundHandler);
   app.use(errorHandler);
