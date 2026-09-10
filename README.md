@@ -84,7 +84,7 @@ Acesso: **JWT** no header `Authorization: Bearer <accessToken>` (obtido no login
 | `POST /auth/login` | público | login por e-mail + senha → `{ accessToken, user }` + cookie |
 | `POST /auth/refresh` | cookie | rotaciona a sessão |
 | `POST /auth/logout` | cookie | revoga o refresh token |
-| `POST /auth/password-reset` / `.../confirm` | público | recuperação de senha (sempre 204) |
+| `POST /auth/password-reset` / `.../confirm` | público | link de definição de senha — primeiro acesso e "esqueci minha senha" (request sempre 204) |
 | `GET /users/me` | autenticado | usuário da sessão (+ perfil de aluno) |
 | `GET /users/mentors` | staff | mentores (para o filtro do funil) |
 | `GET/POST /users/staff`, `PATCH /users/staff/:id`, `PATCH /users/staff/:id/active` | admin | gestão de contas de mentor/admin (RF-03) |
