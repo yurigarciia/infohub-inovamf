@@ -21,6 +21,7 @@ export async function markOverdueTasks(): Promise<number> {
         SET status = 'LATE', updated_at = now()
       WHERE status IN ('PENDING', 'IN_PROGRESS')
         AND due_date < CURRENT_DATE
+        AND deleted_at IS NULL
       RETURNING id, team_id`,
   );
   for (const row of rows) {
@@ -46,12 +47,13 @@ export async function dispatchDueReminders(): Promise<number> {
     `SELECT r.id, r.task_id, t.team_id, t.title
        FROM task_reminders r
        JOIN tasks t ON t.id = r.task_id
-      WHERE r.sent = false AND r.remind_at <= now()`,
+      WHERE r.sent = false AND r.remind_at <= now()
+        AND r.deleted_at IS NULL AND t.deleted_at IS NULL`,
   );
 
   for (const r of due) {
     const members = await query<{ user_id: string }>(
-      `SELECT user_id FROM team_members WHERE team_id = $1`,
+      `SELECT user_id FROM team_members WHERE team_id = $1 AND deleted_at IS NULL`,
       [r.team_id],
     );
     for (const m of members) {

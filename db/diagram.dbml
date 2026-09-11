@@ -1,5 +1,11 @@
 // InfoHub -> InovAMF — DER
 // Importar em https://dbdiagram.io (Import > DBML)
+//
+// Soft delete: idea_areas, teams, team_members, team_mentors, team_notes,
+// task_templates, tasks, task_submissions e task_reminders têm deleted_at
+// (NULL = ativo). Nunca se roda DELETE; leituras filtram deleted_at IS NULL
+// e a exclusão de equipe/tarefa marca os filhos em cascata. Ficam de fora
+// users (usa is_active), journey_stages, os logs e as tabelas de token.
 
 Table users {
   id                 uuid      [pk, default: `gen_random_uuid()`]
@@ -22,8 +28,9 @@ Table student_profiles {
 
 Table idea_areas {
   id          int       [pk, increment]
-  name        varchar   [unique]
+  name        varchar   [note: "unique só entre ativas (índice parcial)"]
   created_at  timestamp
+  deleted_at  timestamp [note: "soft delete (NULL = ativa)"]
 }
 
 Table journey_stages {
@@ -44,6 +51,7 @@ Table teams {
   is_ready_for_inovamf   boolean
   created_at             timestamp
   updated_at             timestamp
+  deleted_at             timestamp [note: "soft delete (NULL = ativa)"]
 }
 
 Table team_members {
@@ -52,9 +60,10 @@ Table team_members {
   user_id      uuid      [ref: > users.id]
   member_role  varchar   [note: "LEADER | MEMBER"]
   joined_at    timestamp
+  deleted_at   timestamp [note: "soft delete (cascata da equipe)"]
 
   indexes {
-    (team_id, user_id) [unique]
+    (team_id, user_id) [unique, note: "parcial: só entre ativos (deleted_at IS NULL)"]
   }
 }
 
@@ -63,9 +72,10 @@ Table team_mentors {
   team_id      uuid      [ref: > teams.id]
   mentor_id    uuid      [ref: > users.id]
   assigned_at  timestamp
+  deleted_at   timestamp [note: "soft delete (cascata da equipe)"]
 
   indexes {
-    (team_id, mentor_id) [unique]
+    (team_id, mentor_id) [unique, note: "parcial: só entre ativos (deleted_at IS NULL)"]
   }
 }
 
@@ -84,6 +94,7 @@ Table team_notes {
   author_id   uuid      [ref: > users.id]
   content     text
   created_at  timestamp
+  deleted_at  timestamp [note: "soft delete (NULL = ativa)"]
 }
 
 Table task_templates {
@@ -92,6 +103,7 @@ Table task_templates {
   title        varchar
   description  text
   created_at   timestamp
+  deleted_at   timestamp [note: "soft delete (NULL = ativo)"]
 }
 
 Table tasks {
@@ -106,6 +118,7 @@ Table tasks {
   created_by   uuid      [ref: > users.id]
   created_at   timestamp
   updated_at   timestamp
+  deleted_at   timestamp [note: "soft delete (cascata da equipe)"]
 }
 
 Table task_submissions {
@@ -121,6 +134,7 @@ Table task_submissions {
   review_comment    text
   reviewed_by       uuid      [ref: > users.id]
   reviewed_at       timestamp
+  deleted_at        timestamp [note: "soft delete (cascata da tarefa/equipe)"]
 }
 
 Table task_reminders {
@@ -131,6 +145,7 @@ Table task_reminders {
   sent       boolean
   sent_at    timestamp
   created_at timestamp
+  deleted_at timestamp [note: "soft delete (cascata da tarefa/equipe)"]
 }
 
 Table email_notifications {

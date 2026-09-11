@@ -7,6 +7,22 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
 
 -- ---------------------------------------------------------------------
+-- SOFT DELETE (exclusão lógica) — as entidades do "núcleo" operacional
+-- que um admin/mentor exclui pela tela ganham a coluna `deleted_at`
+-- (NULL = ativo). Nunca se roda DELETE nelas: marca-se `deleted_at` e
+-- todas as leituras filtram `deleted_at IS NULL`. A exclusão de um
+-- agregado (equipe, tarefa) marca os filhos na mesma transação.
+--   COM soft delete: idea_areas, teams, team_members, team_mentors,
+--     team_notes, task_templates, tasks, task_submissions, task_reminders.
+--   SEM (hard delete / ciclo próprio): users (usa is_active),
+--     student_profiles, journey_stages (fixas), team_stage_history e
+--     audit_logs e email_notifications (logs, nunca somem),
+--     refresh_tokens / password_reset_tokens (revoked_at / used_at).
+-- Constraints UNIQUE viram índices únicos PARCIAIS (só entre linhas
+-- ativas), pra um nome/vínculo poder ser reusado após a exclusão.
+-- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
 -- 1. USERS — administradores, mentores e alunos (líder ou integrante).
 --    A distinção líder/integrante é POR EQUIPE (ver team_members),
 --    não um atributo global do usuário (Q1). Atributos específicos de
@@ -47,8 +63,9 @@ CREATE TABLE student_profiles (
 -- ---------------------------------------------------------------------
 CREATE TABLE idea_areas (
     id          SERIAL PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL UNIQUE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    name        VARCHAR(100) NOT NULL,   -- unicidade só entre ativas (índice parcial abaixo)
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at  TIMESTAMPTZ              -- soft delete (NULL = ativa)
 );
 
 -- ---------------------------------------------------------------------
@@ -77,7 +94,8 @@ CREATE TABLE teams (
     current_stage_id        INT NOT NULL REFERENCES journey_stages(id),
     is_ready_for_inovamf    BOOLEAN NOT NULL DEFAULT FALSE,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at              TIMESTAMPTZ            -- soft delete (NULL = ativa)
 );
 
 -- ---------------------------------------------------------------------
@@ -92,7 +110,8 @@ CREATE TABLE team_members (
     user_id      UUID NOT NULL REFERENCES users(id),
     member_role  VARCHAR(10) NOT NULL CHECK (member_role IN ('LEADER', 'MEMBER')),
     joined_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (team_id, user_id)
+    deleted_at   TIMESTAMPTZ            -- soft delete (cascata da equipe / remoção do integrante)
+    -- UNIQUE(team_id, user_id) só entre ativos — ver índice parcial abaixo
 );
 
 -- ---------------------------------------------------------------------
@@ -104,7 +123,8 @@ CREATE TABLE team_mentors (
     team_id      UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     mentor_id    UUID NOT NULL REFERENCES users(id),
     assigned_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (team_id, mentor_id)
+    deleted_at   TIMESTAMPTZ            -- soft delete (cascata da equipe / desatribuição do mentor)
+    -- UNIQUE(team_id, mentor_id) só entre ativos — ver índice parcial abaixo
 );
 
 -- ---------------------------------------------------------------------
@@ -129,7 +149,8 @@ CREATE TABLE team_notes (
     team_id     UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     author_id   UUID NOT NULL REFERENCES users(id),
     content     TEXT NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at  TIMESTAMPTZ            -- soft delete (NULL = ativa)
 );
 
 -- ---------------------------------------------------------------------
@@ -141,7 +162,8 @@ CREATE TABLE task_templates (
     stage_id     INT NOT NULL REFERENCES journey_stages(id),
     title        VARCHAR(200) NOT NULL,
     description  TEXT,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at   TIMESTAMPTZ            -- soft delete (NULL = ativo)
 );
 
 -- ---------------------------------------------------------------------
@@ -160,7 +182,8 @@ CREATE TABLE tasks (
                     ('PENDING', 'IN_PROGRESS', 'SUBMITTED', 'LATE', 'APPROVED', 'REJECTED')),
     created_by   UUID NOT NULL REFERENCES users(id),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at   TIMESTAMPTZ            -- soft delete (NULL = ativa; cascata da equipe)
 );
 
 -- ---------------------------------------------------------------------
@@ -181,7 +204,8 @@ CREATE TABLE task_submissions (
                         CHECK (review_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     review_comment     TEXT,
     reviewed_by        UUID REFERENCES users(id),
-    reviewed_at        TIMESTAMPTZ
+    reviewed_at        TIMESTAMPTZ,
+    deleted_at         TIMESTAMPTZ       -- soft delete (NULL = ativa; cascata da tarefa/equipe)
 );
 
 -- ---------------------------------------------------------------------
@@ -195,7 +219,8 @@ CREATE TABLE task_reminders (
     is_manual   BOOLEAN NOT NULL DEFAULT FALSE,      -- RF-20: lembrete manual avulso
     sent        BOOLEAN NOT NULL DEFAULT FALSE,
     sent_at     TIMESTAMPTZ,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at  TIMESTAMPTZ                          -- soft delete (NULL = ativo; cascata da tarefa/equipe)
 );
 
 -- ---------------------------------------------------------------------
@@ -282,6 +307,7 @@ CREATE TABLE password_reset_tokens (
 CREATE INDEX idx_teams_current_stage        ON teams (current_stage_id);
 CREATE INDEX idx_teams_area                 ON teams (area_id);
 CREATE INDEX idx_teams_cohort               ON teams (cohort);
+CREATE INDEX idx_teams_active               ON teams (created_at) WHERE deleted_at IS NULL;
 
 CREATE INDEX idx_team_members_user          ON team_members (user_id);
 CREATE INDEX idx_team_members_team          ON team_members (team_id);
@@ -295,11 +321,19 @@ CREATE INDEX idx_team_notes_team            ON team_notes (team_id);
 CREATE INDEX idx_tasks_team                 ON tasks (team_id);
 CREATE INDEX idx_tasks_status               ON tasks (status);
 CREATE INDEX idx_tasks_due_date             ON tasks (due_date);
+CREATE INDEX idx_tasks_open_overdue         ON tasks (due_date)
+    WHERE deleted_at IS NULL AND status IN ('PENDING', 'IN_PROGRESS');  -- RN-04
 
 CREATE INDEX idx_task_submissions_task      ON task_submissions (task_id);
-CREATE INDEX idx_task_submissions_current   ON task_submissions (task_id) WHERE is_current;
+CREATE INDEX idx_task_submissions_current   ON task_submissions (task_id) WHERE is_current AND deleted_at IS NULL;
 
-CREATE INDEX idx_task_reminders_pending     ON task_reminders (remind_at) WHERE NOT sent;
+CREATE INDEX idx_task_reminders_pending     ON task_reminders (remind_at) WHERE NOT sent AND deleted_at IS NULL;
+
+-- Unicidade só entre linhas ativas (soft delete) — libera reuso de
+-- nome/vínculo depois da exclusão.
+CREATE UNIQUE INDEX ux_idea_areas_name_active     ON idea_areas   (name)              WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX ux_team_members_active        ON team_members (team_id, user_id)  WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX ux_team_mentors_active        ON team_mentors (team_id, mentor_id) WHERE deleted_at IS NULL;
 
 CREATE INDEX idx_email_notifications_user   ON email_notifications (recipient_user_id);
 

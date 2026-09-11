@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { maybeOne, query } from "../../shared/sql.js";
+import { maybeOne, query, tx } from "../../shared/sql.js";
 
 /**
  * SQL puro do módulo de tarefas (B4). Datas saem como ISO string; o
@@ -94,10 +94,12 @@ const USER_JSON = (alias: string) => `
 export async function listTemplates(stageId?: number): Promise<TaskTemplateRow[]> {
   const cols = `id, stage_id AS "stageId", title, description, created_at AS "createdAt"`;
   if (stageId === undefined) {
-    return query<TaskTemplateRow>(`SELECT ${cols} FROM task_templates ORDER BY stage_id, title`);
+    return query<TaskTemplateRow>(
+      `SELECT ${cols} FROM task_templates WHERE deleted_at IS NULL ORDER BY stage_id, title`,
+    );
   }
   return query<TaskTemplateRow>(
-    `SELECT ${cols} FROM task_templates WHERE stage_id = $1 ORDER BY title`,
+    `SELECT ${cols} FROM task_templates WHERE stage_id = $1 AND deleted_at IS NULL ORDER BY title`,
     [stageId],
   );
 }
@@ -105,7 +107,7 @@ export async function listTemplates(stageId?: number): Promise<TaskTemplateRow[]
 export async function getTemplate(id: string): Promise<TaskTemplateRow | null> {
   return maybeOne<TaskTemplateRow>(
     `SELECT id, stage_id AS "stageId", title, description, created_at AS "createdAt"
-       FROM task_templates WHERE id = $1`,
+       FROM task_templates WHERE id = $1 AND deleted_at IS NULL`,
     [id],
   );
 }
@@ -113,12 +115,15 @@ export async function getTemplate(id: string): Promise<TaskTemplateRow | null> {
 // --- tasks --------------------------------------------------------
 
 export async function getTask(id: string): Promise<TaskRow | null> {
-  return maybeOne<TaskRow>(`SELECT ${TASK_COLS} FROM tasks WHERE id = $1`, [id]);
+  return maybeOne<TaskRow>(
+    `SELECT ${TASK_COLS} FROM tasks WHERE id = $1 AND deleted_at IS NULL`,
+    [id],
+  );
 }
 
 export async function listTasksByTeam(teamId: string): Promise<TaskRow[]> {
   return query<TaskRow>(
-    `SELECT ${TASK_COLS} FROM tasks WHERE team_id = $1 ORDER BY due_date, created_at`,
+    `SELECT ${TASK_COLS} FROM tasks WHERE team_id = $1 AND deleted_at IS NULL ORDER BY due_date, created_at`,
     [teamId],
   );
 }
@@ -138,9 +143,9 @@ export async function listTasksForUser(userId: string): Promise<(TaskRow & { tea
             t.updated_at  AS "updatedAt",
             tm.idea_name  AS "teamName"
        FROM tasks t
-       JOIN teams tm ON tm.id = t.team_id
-       JOIN team_members m ON m.team_id = t.team_id
-      WHERE m.user_id = $1
+       JOIN teams tm ON tm.id = t.team_id AND tm.deleted_at IS NULL
+       JOIN team_members m ON m.team_id = t.team_id AND m.deleted_at IS NULL
+      WHERE m.user_id = $1 AND t.deleted_at IS NULL
       ORDER BY t.due_date, t.created_at`,
     [userId],
   );
@@ -184,7 +189,7 @@ export async function updateTask(
         description  = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE description END,
         due_date     = COALESCE($4::date, due_date),
         updated_at   = now()
-      WHERE id = $1
+      WHERE id = $1 AND deleted_at IS NULL
       RETURNING ${TASK_COLS}`,
     [id, patch.title ?? null, patch.description ?? null, patch.dueDate ?? null],
   );
@@ -225,7 +230,7 @@ export async function listSubmissions(taskIds: string[]): Promise<SubmissionRow[
        FROM task_submissions s
        JOIN users su ON su.id = s.submitted_by
        LEFT JOIN users ru ON ru.id = s.reviewed_by
-      WHERE s.task_id = ANY($1::uuid[])
+      WHERE s.task_id = ANY($1::uuid[]) AND s.deleted_at IS NULL
       ORDER BY s.version DESC`,
     [taskIds],
   );
@@ -255,7 +260,7 @@ async function listSubmissionsById(id: string): Promise<SubmissionRow[]> {
        FROM task_submissions s
        JOIN users su ON su.id = s.submitted_by
        LEFT JOIN users ru ON ru.id = s.reviewed_by
-      WHERE s.id = $1`,
+      WHERE s.id = $1 AND s.deleted_at IS NULL`,
     [id],
   );
 }
@@ -270,7 +275,7 @@ export async function insertSubmission(
   },
 ): Promise<{ id: string; version: number }> {
   await client.query(
-    `UPDATE task_submissions SET is_current = false WHERE task_id = $1`,
+    `UPDATE task_submissions SET is_current = false WHERE task_id = $1 AND deleted_at IS NULL`,
     [input.taskId],
   );
   const r = await client.query<{ id: string; version: number }>(
@@ -309,7 +314,7 @@ export async function listReminders(taskIds: string[]): Promise<ReminderRow[]> {
             sent_at   AS "sentAt",
             created_at AS "createdAt"
        FROM task_reminders
-      WHERE task_id = ANY($1::uuid[])
+      WHERE task_id = ANY($1::uuid[]) AND deleted_at IS NULL
       ORDER BY remind_at`,
     [taskIds],
   );
@@ -335,10 +340,45 @@ export async function insertReminder(input: {
 
 export async function teamMemberIds(teamId: string): Promise<string[]> {
   const rows = await query<{ user_id: string }>(
-    `SELECT user_id FROM team_members WHERE team_id = $1`,
+    `SELECT user_id FROM team_members WHERE team_id = $1 AND deleted_at IS NULL`,
     [teamId],
   );
   return rows.map((r) => r.user_id);
+}
+
+// --- soft delete ------------------------------------------------------
+
+/** Exclusão lógica de uma tarefa, em cascata: marca a tarefa, suas
+ * entregas e seus lembretes. Numa transação. `false` se já não existia. */
+export async function softDeleteTaskCascade(taskId: string): Promise<boolean> {
+  return tx(async (client) => {
+    const hit = await client.query(
+      `UPDATE tasks SET deleted_at = now(), updated_at = now()
+        WHERE id = $1 AND deleted_at IS NULL`,
+      [taskId],
+    );
+    if (hit.rowCount === 0) return false;
+    await client.query(
+      `UPDATE task_submissions SET deleted_at = now() WHERE task_id = $1 AND deleted_at IS NULL`,
+      [taskId],
+    );
+    await client.query(
+      `UPDATE task_reminders SET deleted_at = now() WHERE task_id = $1 AND deleted_at IS NULL`,
+      [taskId],
+    );
+    return true;
+  });
+}
+
+/** Exclusão lógica de um modelo de tarefa (RF-11). Tarefas já criadas a
+ * partir dele não são afetadas (template_id continua apontando). */
+export async function softDeleteTemplate(id: string): Promise<boolean> {
+  const rows = await query<{ id: string }>(
+    `UPDATE task_templates SET deleted_at = now()
+      WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
+    [id],
+  );
+  return rows.length > 0;
 }
 
 export async function adminIds(): Promise<string[]> {

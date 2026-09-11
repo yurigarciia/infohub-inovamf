@@ -108,10 +108,14 @@ model StudentProfile {
 }
 
 /// Área/setor da ideia, lista configurável pelo administrador.
+/// Soft delete: `deletedAt` (NULL = ativa). Em schema.sql a unicidade de
+/// `name` é um índice PARCIAL (só entre linhas ativas) — o `@unique`
+/// abaixo é a aproximação possível no DSL do Prisma.
 model IdeaArea {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
 
   teams     Team[]
 
@@ -145,6 +149,7 @@ model Team {
   isReadyForInovamf  Boolean      @default(false) @map("is_ready_for_inovamf")
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
+  deletedAt          DateTime?    @map("deleted_at") /// soft delete (NULL = ativa)
 
   area          IdeaArea?          @relation(fields: [areaId], references: [id])
   currentStage  JourneyStage       @relation(fields: [currentStageId], references: [id])
@@ -165,6 +170,7 @@ model TeamMember {
   userId     String         @map("user_id")
   memberRole TeamMemberRole @map("member_role")
   joinedAt   DateTime       @default(now()) @map("joined_at")
+  deletedAt  DateTime?      @map("deleted_at") /// soft delete; @@unique é PARCIAL em schema.sql (só entre ativos)
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
@@ -177,8 +183,9 @@ model TeamMember {
 model TeamMentor {
   id         String   @id @default(uuid())
   teamId     String   @map("team_id")
-  mentorId   String   @map("mentor_id")
-  assignedAt DateTime @default(now()) @map("assigned_at")
+  mentorId   String    @map("mentor_id")
+  assignedAt DateTime  @default(now()) @map("assigned_at")
+  deletedAt  DateTime? @map("deleted_at") /// soft delete; @@unique é PARCIAL em schema.sql (só entre ativos)
 
   team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   mentor User @relation(fields: [mentorId], references: [id])
@@ -209,7 +216,8 @@ model TeamNote {
   teamId    String   @map("team_id")
   authorId  String   @map("author_id")
   content   String
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at") /// soft delete (NULL = ativa)
 
   team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id])
@@ -223,7 +231,8 @@ model TaskTemplate {
   stageId     Int      @map("stage_id")
   title       String
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at") /// soft delete (NULL = ativo)
 
   stage JourneyStage @relation(fields: [stageId], references: [id])
   tasks Task[]
@@ -244,6 +253,7 @@ model Task {
   createdById String     @map("created_by")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at") /// soft delete (NULL = ativa; cascata da equipe)
 
   team        Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   stage       JourneyStage   @relation(fields: [stageId], references: [id])
@@ -271,6 +281,7 @@ model TaskSubmission {
   reviewComment    String?      @map("review_comment")
   reviewedById     String?      @map("reviewed_by")
   reviewedAt       DateTime?    @map("reviewed_at")
+  deletedAt        DateTime?    @map("deleted_at") /// soft delete (cascata da tarefa/equipe)
 
   task        Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   submittedBy User  @relation("SubmittedBy", fields: [submittedById], references: [id])
@@ -288,6 +299,7 @@ model TaskReminder {
   sent      Boolean   @default(false)
   sentAt    DateTime? @map("sent_at")
   createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at") /// soft delete (cascata da tarefa/equipe)
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 

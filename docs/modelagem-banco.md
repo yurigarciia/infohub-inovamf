@@ -61,13 +61,37 @@ Todas as tabelas de entidade de negócio usam `UUID` como chave primária (`gen_
 | Q1 — login de integrante | Integrante tem login próprio, diferente do líder | `team_members.member_role` (`LEADER`/`MEMBER`) distingue o acesso dentro da equipe — não é um atributo global em `users`, pois a mesma pessoa pode ser líder em uma equipe e integrante em outra |
 | Q2 — perfil de mentor | Perfil próprio, restrito às equipes | `users.role = 'MENTOR'` + tabela `team_mentors` (N:N) escopando o acesso |
 | Q3 — Pitch Vídeo | Link externo, não upload | `task_submissions.is_external_link` + `file_url` aceitando link (YouTube/Drive) |
-| Q4 — múltiplas equipes por aluno | Permitido | `team_members` é N:N sem `UNIQUE(user_id)` global — só `UNIQUE(team_id, user_id)` |
+| Q4 — múltiplas equipes por aluno | Permitido | `team_members` é N:N sem `UNIQUE(user_id)` global — só unicidade de `(team_id, user_id)` (índice parcial entre ativos, ver Seção 5) |
 | Q5 — máximo de integrantes | Sem limite | Nenhuma constraint de contagem em `team_members` |
 | Q6 — etapa pós-InovAMF | Não existe | `teams.is_ready_for_inovamf` é o status final; não há etapa 7 em `journey_stages` |
 | Q7 — serviço de e-mail | Resend | `email_notifications.provider_message_id` guarda o id retornado pelo Resend |
 
 **Fluxo de cadastro por e-mail (formulário inicial, T005):** o formulário da Etapa 1 pede o e-mail de cada integrante, não só nome/curso. Para cada e-mail informado (líder e colegas), o backend faz *lookup* em `users.email` (`UNIQUE`): se já existe conta, apenas cria o vínculo em `team_members`; se não existe, cria o `User` (+ `student_profiles`). Isso evita contas duplicadas quando o mesmo aluno é convidado por equipes diferentes (Q4) e é o motivo de `users.email` ser `UNIQUE` no schema.
 
-## 5. DER no dbdiagram.io
+## 5. Soft delete (exclusão lógica)
+
+Requisito posterior: nenhuma exclusão física no núcleo operacional. As tabelas
+que um admin/mentor "exclui" pela tela ganham `deleted_at TIMESTAMPTZ` (NULL =
+ativo); nunca se roda `DELETE`, marca-se `deleted_at` e **toda leitura filtra
+`deleted_at IS NULL`**.
+
+| Com soft delete | Sem (motivo) |
+|---|---|
+| `idea_areas`, `teams`, `team_members`, `team_mentors`, `team_notes`, `task_templates`, `tasks`, `task_submissions`, `task_reminders` | `users` (usa `is_active`), `student_profiles`, `journey_stages` (fixas), `team_stage_history` (histórico), `audit_logs` / `email_notifications` (logs, nunca somem), `refresh_tokens` / `password_reset_tokens` (já têm `revoked_at` / `used_at`) |
+
+**Constraints `UNIQUE` → índices únicos parciais.** Para um nome/vínculo poder ser
+reusado depois da exclusão, a unicidade passa a valer só entre linhas ativas:
+
+- `ux_idea_areas_name_active` — `idea_areas(name) WHERE deleted_at IS NULL`
+- `ux_team_members_active` — `team_members(team_id, user_id) WHERE deleted_at IS NULL`
+- `ux_team_mentors_active` — `team_mentors(team_id, mentor_id) WHERE deleted_at IS NULL`
+
+**Cascata.** Excluir um agregado marca os filhos na mesma transação:
+`teams` → `team_members`, `team_mentors`, `team_notes`, `tasks` → (`task_submissions`,
+`task_reminders`). `tasks` → `task_submissions`, `task_reminders`. `team_stage_history`
+não é marcado (é registro histórico). No código: `softDeleteTeamCascade` /
+`softDeleteTaskCascade` (repositórios do `server/`).
+
+## 6. DER no dbdiagram.io
 
 Importar `db/diagram.dbml` em https://dbdiagram.io via **Import → DBML** para projetar o diagrama no telão.

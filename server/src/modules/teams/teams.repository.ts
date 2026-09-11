@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { maybeOne, query } from "../../shared/sql.js";
+import { maybeOne, query, tx } from "../../shared/sql.js";
 
 /**
  * SQL puro do módulo de equipes (B3). Sem regra de negócio — as
@@ -124,26 +124,33 @@ export async function listTeams(filters: BoardFilters): Promise<TeamRow[]> {
   if (filters.areaId !== undefined) add(`t.area_id = $?`, filters.areaId);
   if (filters.cohort) add(`t.cohort = $?`, filters.cohort);
   if (filters.mentorId) {
-    add(`EXISTS (SELECT 1 FROM team_mentors tm WHERE tm.team_id = t.id AND tm.mentor_id = $?)`, filters.mentorId);
+    add(
+      `EXISTS (SELECT 1 FROM team_mentors tm WHERE tm.team_id = t.id AND tm.deleted_at IS NULL AND tm.mentor_id = $?)`,
+      filters.mentorId,
+    );
   }
   if (filters.taskStatus) {
-    add(`EXISTS (SELECT 1 FROM tasks tk WHERE tk.team_id = t.id AND tk.status = $?)`, filters.taskStatus);
+    add(
+      `EXISTS (SELECT 1 FROM tasks tk WHERE tk.team_id = t.id AND tk.deleted_at IS NULL AND tk.status = $?)`,
+      filters.taskStatus,
+    );
   }
   if (filters.course) {
     add(
       `EXISTS (
          SELECT 1 FROM team_members m
          JOIN student_profiles sp ON sp.user_id = m.user_id
-         WHERE m.team_id = t.id AND sp.course ILIKE '%' || $? || '%'
+         WHERE m.team_id = t.id AND m.deleted_at IS NULL AND sp.course ILIKE '%' || $? || '%'
        )`,
       filters.course.trim(),
     );
   }
 
+  where.unshift("t.deleted_at IS NULL");
   const sql = `
     SELECT ${TEAM_COLS}
     FROM teams t
-    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    WHERE ${where.join(" AND ")}
     ORDER BY t.created_at DESC
   `;
   return query<TeamRow>(sql, params);
@@ -154,15 +161,18 @@ export async function listTeamsForUser(userId: string): Promise<TeamRow[]> {
   return query<TeamRow>(
     `SELECT ${TEAM_COLS}
        FROM teams t
-       JOIN team_members m ON m.team_id = t.id
-      WHERE m.user_id = $1
+       JOIN team_members m ON m.team_id = t.id AND m.deleted_at IS NULL
+      WHERE m.user_id = $1 AND t.deleted_at IS NULL
       ORDER BY t.created_at DESC`,
     [userId],
   );
 }
 
 export async function getTeam(teamId: string): Promise<TeamRow | null> {
-  return maybeOne<TeamRow>(`SELECT ${TEAM_COLS} FROM teams t WHERE t.id = $1`, [teamId]);
+  return maybeOne<TeamRow>(
+    `SELECT ${TEAM_COLS} FROM teams t WHERE t.id = $1 AND t.deleted_at IS NULL`,
+    [teamId],
+  );
 }
 
 /** Membros (com usuário) de várias equipes de uma vez — para o board. */
@@ -177,7 +187,7 @@ export async function listMembers(teamIds: string[]): Promise<TeamMemberRow[]> {
             ${USER_JSON("u")} AS user
        FROM team_members m
        JOIN users u ON u.id = m.user_id
-      WHERE m.team_id = ANY($1::uuid[])
+      WHERE m.team_id = ANY($1::uuid[]) AND m.deleted_at IS NULL
       ORDER BY m.member_role DESC, u.name`,
     [teamIds],
   );
@@ -192,7 +202,7 @@ export async function listMentors(teamId: string): Promise<TeamMentorRow[]> {
             ${USER_JSON("u")} AS mentor
        FROM team_mentors tm
        JOIN users u ON u.id = tm.mentor_id
-      WHERE tm.team_id = $1
+      WHERE tm.team_id = $1 AND tm.deleted_at IS NULL
       ORDER BY u.name`,
     [teamId],
   );
@@ -223,16 +233,16 @@ export async function listNotes(teamId: string): Promise<TeamNoteRow[]> {
             ${USER_JSON("u")} AS author
        FROM team_notes n
        JOIN users u ON u.id = n.author_id
-      WHERE n.team_id = $1
+      WHERE n.team_id = $1 AND n.deleted_at IS NULL
       ORDER BY n.created_at DESC`,
     [teamId],
   );
 }
 
-/** true se o aluno integra a equipe / o mentor está atribuído a ela. */
+/** true se o aluno integra a equipe / o mentor está atribuído a ela (só vínculos ativos). */
 export async function isMember(teamId: string, userId: string): Promise<boolean> {
   const row = await maybeOne<{ x: number }>(
-    `SELECT 1 AS x FROM team_members WHERE team_id = $1 AND user_id = $2`,
+    `SELECT 1 AS x FROM team_members WHERE team_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
     [teamId, userId],
   );
   return row !== null;
@@ -240,7 +250,7 @@ export async function isMember(teamId: string, userId: string): Promise<boolean>
 
 export async function isAssignedMentor(teamId: string, mentorId: string): Promise<boolean> {
   const row = await maybeOne<{ x: number }>(
-    `SELECT 1 AS x FROM team_mentors WHERE team_id = $1 AND mentor_id = $2`,
+    `SELECT 1 AS x FROM team_mentors WHERE team_id = $1 AND mentor_id = $2 AND deleted_at IS NULL`,
     [teamId, mentorId],
   );
   return row !== null;
@@ -313,7 +323,7 @@ export async function insertMember(
 ): Promise<void> {
   await client.query(
     `INSERT INTO team_members (team_id, user_id, member_role) VALUES ($1, $2, $3)
-     ON CONFLICT (team_id, user_id) DO NOTHING`,
+     ON CONFLICT (team_id, user_id) WHERE deleted_at IS NULL DO NOTHING`,
     [teamId, userId, role],
   );
 }
@@ -348,7 +358,7 @@ export async function updateCurrentStage(
         SET current_stage_id = $2,
             is_ready_for_inovamf = CASE WHEN $2 = 6 THEN t.is_ready_for_inovamf ELSE false END,
             updated_at = now()
-      WHERE t.id = $1
+      WHERE t.id = $1 AND t.deleted_at IS NULL
       RETURNING ${TEAM_COLS}`,
     [teamId, stageId],
   );
@@ -372,4 +382,63 @@ export async function insertNote(
 export async function listAdminIds(): Promise<string[]> {
   const rows = await query<{ id: string }>(`SELECT id FROM users WHERE role = 'ADMIN'`);
   return rows.map((r) => r.id);
+}
+
+// --- soft delete ------------------------------------------------------
+
+/**
+ * Exclusão lógica de uma equipe, em cascata: marca `deleted_at` na
+ * equipe e em tudo que pende dela (membros, mentores, notas, tarefas,
+ * entregas e lembretes das tarefas). Numa transação. Devolve `false` se
+ * a equipe não existe ou já estava excluída.
+ * team_stage_history NÃO é marcado — é histórico, fica como registro.
+ */
+export async function softDeleteTeamCascade(teamId: string): Promise<boolean> {
+  return tx(async (client) => {
+    const hit = await client.query(
+      `UPDATE teams SET deleted_at = now(), updated_at = now()
+        WHERE id = $1 AND deleted_at IS NULL`,
+      [teamId],
+    );
+    if (hit.rowCount === 0) return false;
+
+    await client.query(
+      `UPDATE task_reminders SET deleted_at = now()
+        WHERE deleted_at IS NULL AND task_id IN (SELECT id FROM tasks WHERE team_id = $1)`,
+      [teamId],
+    );
+    await client.query(
+      `UPDATE task_submissions SET deleted_at = now()
+        WHERE deleted_at IS NULL AND task_id IN (SELECT id FROM tasks WHERE team_id = $1)`,
+      [teamId],
+    );
+    await client.query(
+      `UPDATE tasks SET deleted_at = now(), updated_at = now()
+        WHERE team_id = $1 AND deleted_at IS NULL`,
+      [teamId],
+    );
+    await client.query(
+      `UPDATE team_notes SET deleted_at = now() WHERE team_id = $1 AND deleted_at IS NULL`,
+      [teamId],
+    );
+    await client.query(
+      `UPDATE team_members SET deleted_at = now() WHERE team_id = $1 AND deleted_at IS NULL`,
+      [teamId],
+    );
+    await client.query(
+      `UPDATE team_mentors SET deleted_at = now() WHERE team_id = $1 AND deleted_at IS NULL`,
+      [teamId],
+    );
+    return true;
+  });
+}
+
+/** Exclusão lógica de uma anotação interna (RF-10). */
+export async function softDeleteNote(noteId: string): Promise<boolean> {
+  const rows = await query<{ id: string }>(
+    `UPDATE team_notes SET deleted_at = now()
+      WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
+    [noteId],
+  );
+  return rows.length > 0;
 }

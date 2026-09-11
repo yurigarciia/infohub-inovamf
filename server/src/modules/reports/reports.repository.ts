@@ -20,7 +20,8 @@ export interface DashboardStats {
  * cláusula `($1::text IS NULL OR cohort = $1)` cobre os dois casos.
  */
 export async function dashboard(cohort: string | null): Promise<DashboardStats> {
-  const teamFilter = `($1::text IS NULL OR t.cohort = $1)`;
+  // só equipes/tarefas não excluídas (soft delete)
+  const teamFilter = `t.deleted_at IS NULL AND ($1::text IS NULL OR t.cohort = $1)`;
 
   const totals = await maybeOne<{ totalActiveTeams: string; readyForInovamfCount: string }>(
     `SELECT COUNT(*)::int                                   AS "totalActiveTeams",
@@ -46,7 +47,7 @@ export async function dashboard(cohort: string | null): Promise<DashboardStats> 
             COUNT(*) FILTER (WHERE tk.status = 'SUBMITTED')::int AS "awaitingReviewCount"
        FROM tasks tk
        JOIN teams t ON t.id = tk.team_id
-      WHERE ${teamFilter}`,
+      WHERE tk.deleted_at IS NULL AND ${teamFilter}`,
     [cohort],
   );
 
