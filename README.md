@@ -66,10 +66,11 @@ server/               # backend Express + pg (sem ORM)
                       #   cada um: routes -> controller (zod) -> service (regra) -> repository (SQL puro)
     middleware/       # auth (JWT), requireRole, errorHandler
     jobs/             # scheduler (RN-04 + lembretes) + rules puras (testadas)
-    db/               # pool, migrate.ts (aplica db/schema.sql), seed.ts
+    db/               # pool, migrate.ts, seed.ts, bootstrap.ts (deploy)
     shared/           # errors, sql (query/one/tx)
 db/                   # schema.sql (FONTE DA VERDADE), diagram.dbml
 docs/                 # requisitos, modelagem de banco, plano de frontend
+entrypoint.sh         # deploy: bootstrap do banco + sobe a API
 package.json          # raiz — orquestra app + server + scripts de banco
 ```
 
@@ -177,6 +178,44 @@ O teste de auth é de integração e usa o banco populado — rode `npm run db:s
 ### Jobs agendados
 
 `server/src/jobs/scheduler.ts` roda dentro do processo da API (`setInterval`, 5 min): marca tarefas vencidas como `LATE` (RN-04) e dispara lembretes cuja data chegou (RF-17). É um módulo isolado de propósito — candidato natural a virar um worker separado na fase de reestruturação.
+
+## Deploy (Coolify / container)
+
+O front (`app/`) e a API (`server/`) são **dois processos em portas diferentes** — no
+deploy vão como **dois recursos**. Cada um constrói o repositório inteiro (base
+directory `/`); o `postinstall` da raiz instala `app/` e `server/` a partir de um
+único `npm install`.
+
+**Recurso da API**
+
+| Campo | Valor |
+|---|---|
+| Install command | `npm install` |
+| Build command | `npm run build` |
+| Start command | `./entrypoint.sh` &nbsp;(ou `npm run start:api`) |
+
+`entrypoint.sh` → `server/src/db/bootstrap.ts`: espera o Postgres responder,
+aplica `db/schema.sql` **só se o banco estiver vazio** (idempotente — seguro a
+cada deploy; não há migrations incrementais ainda), depois sobe a API.
+Env de runtime: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `CORS_ORIGIN` (= URL pública
+do front), `PORT` (a plataforma injeta). Opcional: `SEED_ON_INIT=true` popula o
+dataset de demonstração **na primeira subida** (contas com senha `senha123` —
+não use num ambiente real).
+
+**Recurso do front**
+
+| Campo | Valor |
+|---|---|
+| Install command | `npm install` |
+| Build command | `npm run build` |
+| Start command | `npm run start:web` |
+
+`NEXT_PUBLIC_API_URL` (= URL pública da API) precisa estar no ambiente **de build**
+— o Next inlina essa variável no bundle.
+
+> Alternativa mono-recurso: subir só a API com `entrypoint.sh` e servir o front
+> de outro lugar (ou build estático). Não há proxy entre eles — o browser chama a
+> API direto via `NEXT_PUBLIC_API_URL`.
 
 ## Status
 

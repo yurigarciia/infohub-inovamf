@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { env } from "../config/env.js";
 import { closePool } from "./pool.js";
 import { tx } from "../shared/sql.js";
@@ -221,7 +222,7 @@ const EMAILS: SeedEmail[] = [
   { recipient: "student-7", type: "MANUAL_REMINDER", subject: "Lembrete do mentor: falta pouco para regularizar a FinPlan!", team: "team-4", task: "task-4", status: "SENT", providerId: "resend-mock-0009", sentDays: -4, createdDays: -4 },
 ];
 
-async function seed(): Promise<void> {
+export async function seed(): Promise<void> {
   const passwordHash = await bcrypt.hash(PASSWORD, env.BCRYPT_ROUNDS);
 
   await tx(async (c) => {
@@ -356,9 +357,13 @@ async function seed(): Promise<void> {
   console.log("  login aluno:  joao.alves@acad.amf.br (líder team-1)  /  beatriz.fernandes@acad.amf.br (2 equipes)");
 }
 
-seed()
-  .catch((err) => {
-    console.error("Falha no seed:", err instanceof Error ? err.message : err);
-    process.exitCode = 1;
-  })
-  .finally(() => closePool());
+// Só auto-executa quando rodado direto (`npm run db:seed` / `tsx src/db/seed.ts`).
+// Quando importado (ex.: bootstrap.ts com SEED_ON_INIT), quem importa chama seed().
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  seed()
+    .catch((err) => {
+      console.error("Falha no seed:", err instanceof Error ? err.message : err);
+      process.exitCode = 1;
+    })
+    .finally(() => closePool());
+}
