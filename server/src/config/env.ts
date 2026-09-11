@@ -7,9 +7,20 @@ import { z } from "zod";
  * processo não sobe (falha cedo, com mensagem clara).
  */
 const schema = z.object({
-  PORT: z.coerce.number().int().positive().default(3333),
+  // Porta INTERNA da API. Fica separada de PORT de propósito: no deploy
+  // single-service o Next fica com PORT (a única porta exposta) e a API
+  // com API_PORT, atrás do proxy do Next (next.config.ts rewrites).
+  API_PORT: z.coerce.number().int().positive().default(3333),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // Só usado quando o front chama a API cross-origin (dev sem o proxy).
+  // Com o proxy do Next as chamadas são same-origin e o CORS não entra.
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // URL pública do app (a do front). Base dos links em e-mail, ex.:
+  // <APP_URL>/definir-senha?token=...
+  APP_URL: z.string().default("http://localhost:3000"),
+  // Path do cookie de refresh. "/" funciona tanto direto quanto atrás
+  // do proxy (/api/auth/...). Restrinja se a API tiver domínio próprio.
+  REFRESH_COOKIE_PATH: z.string().default("/"),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatória (ver server/.env.example)"),
 

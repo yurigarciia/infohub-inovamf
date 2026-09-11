@@ -15,8 +15,8 @@ async function main(): Promise<void> {
   }
 
   const app = createApp();
-  const server = app.listen(env.PORT, () => {
-    console.log(`InfoHub API ouvindo em http://localhost:${env.PORT}  (env: ${env.NODE_ENV})`);
+  const server = app.listen(env.API_PORT, () => {
+    console.log(`InfoHub API ouvindo em http://localhost:${env.API_PORT}  (env: ${env.NODE_ENV})`);
   });
 
   // RN-04 + RF-17 automático — varre tarefas atrasadas e lembretes devidos

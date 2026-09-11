@@ -7,8 +7,6 @@
     "dev": "concurrently -n front,api -c cyan,magenta \"npm --prefix app run dev\" \"npm --prefix server run dev\"",
     "build": "npm --prefix app run build && npm --prefix server run build",
     "start": "concurrently -n front,api -c cyan,magenta \"npm --prefix app run start\" \"npm --prefix server run start\"",
-    "start:web": "npm --prefix app run start",
-    "start:api": "npm --prefix server run start",
     "lint": "npm --prefix app run lint",
     "typecheck": "npm --prefix server run typecheck",
     "test": "npm --prefix server test",
@@ -19,7 +17,7 @@
     "db:seed": "npm --prefix server run db:seed",
     "db:setup": "npm --prefix server run db:reset && npm --prefix server run db:seed"
   },
-  "devDependencies": {
+  "dependencies": {
     "concurrently": "^9.1.2"
   }
 }

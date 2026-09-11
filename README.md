@@ -115,8 +115,7 @@ Supabase, RDS…). A conexão vem de `DATABASE_URL` no `server/.env`; o reposit�
 não sobe mais um banco pra você.
 
 ```bash
-npm install                  # deps da raiz (concurrently)
-npm run install:all          # deps de app/ e de server/
+npm install                  # instala a raiz + app/ + server/ (via postinstall)
 cp server/.env.example server/.env
 cp app/.env.local.example app/.env.local
 # edite server/.env: aponte DATABASE_URL para o seu Postgres
@@ -127,6 +126,10 @@ npm run db:seed              # popula dados de demo (todas as contas: senha "sen
 
 npm run dev                  # sobe front (:3000) e API (:3333) juntos (concurrently)
 ```
+
+O front chama a API por `/api/*` e o Next reescreve para a API local
+(`app/next.config.ts`) — vale em dev e no deploy, sem CORS. Não precisa de
+`NEXT_PUBLIC_API_URL` a menos que queira bater direto na API.
 
 <details><summary>Subir um Postgres rápido com Docker (opcional)</summary>
 
@@ -145,8 +148,10 @@ Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), 
 
 | Variável | Padrão | Para quê |
 |---|---|---|
-| `PORT` | `3333` | porta da API |
-| `CORS_ORIGIN` | `http://localhost:3000` | origem do front liberada (cookies) |
+| `API_PORT` | `3333` | porta **interna** da API (o front usa `PORT`) |
+| `APP_URL` | `http://localhost:3000` | URL pública do app — base dos links de e-mail |
+| `CORS_ORIGIN` | `http://localhost:3000` | só usada em acesso cross-origin à API (dev sem o proxy) |
+| `REFRESH_COOKIE_PATH` | `/` | path do cookie de refresh (cobre acesso direto e via `/api`) |
 | `DATABASE_URL` | `postgresql://infohub:infohub@localhost:5432/infohub` | conexão com o seu Postgres (local, container próprio ou gerenciado; `?sslmode=require` quando o provedor exigir) |
 | `JWT_ACCESS_SECRET` | — (obrigatória) | assina o access token |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL_DAYS` | `15m` / `30` | validade dos tokens |
@@ -154,7 +159,8 @@ Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), 
 | `RESEND_API_KEY` | vazio | vazio = usa o `ConsoleEmailSender` (loga + grava `email_notifications`) |
 | `UPLOAD_DIR` / `MAX_UPLOAD_MB` | `uploads` / `50` | entregas de arquivo (RNF-04) |
 
-No front, `app/.env.local` só precisa de `NEXT_PUBLIC_API_URL=http://localhost:3333`.
+No front, `app/.env.local` normalmente fica **vazio** (o proxy `/api` é o default).
+`INTERNAL_API_URL` só muda o alvo do proxy se a API não estiver em `127.0.0.1:3333`.
 
 ### Problemas comuns
 
@@ -165,7 +171,8 @@ No front, `app/.env.local` só precisa de `NEXT_PUBLIC_API_URL=http://localhost:
 | Provedor gerenciado recusa a conexão | falta `?sslmode=require` no fim da `DATABASE_URL`. |
 | Login sempre 401 depois de mexer no banco | rode `npm run db:seed` de novo (os testes de integração revogam tokens; o seed limpa tudo). |
 | `npm test` (server) falha em massa | o teste de auth é de integração — precisa do banco populado (`npm run db:setup`). |
-| Front carrega mas nada aparece / 401 no console | `app/.env.local` sem `NEXT_PUBLIC_API_URL`, ou a API não está no ar. |
+| Front carrega mas as chamadas `/api/*` dão 404 | a API não subiu (veja o log do `api` no `concurrently`), ou `INTERNAL_API_URL` aponta pro lugar errado. |
+| Chamadas cross-origin diretas à API dão erro de CORS | você definiu `NEXT_PUBLIC_API_URL` apontando pra outra origem — ajuste `CORS_ORIGIN` no `server/.env` ou remova a var e use o proxy. |
 
 ### Testes
 
@@ -179,43 +186,39 @@ O teste de auth é de integração e usa o banco populado — rode `npm run db:s
 
 `server/src/jobs/scheduler.ts` roda dentro do processo da API (`setInterval`, 5 min): marca tarefas vencidas como `LATE` (RN-04) e dispara lembretes cuja data chegou (RF-17). É um módulo isolado de propósito — candidato natural a virar um worker separado na fase de reestruturação.
 
-## Deploy (Coolify / container)
+## Deploy (Coolify / container — recurso único)
 
-O front (`app/`) e a API (`server/`) são **dois processos em portas diferentes** — no
-deploy vão como **dois recursos**. Cada um constrói o repositório inteiro (base
-directory `/`); o `postinstall` da raiz instala `app/` e `server/` a partir de um
-único `npm install`.
+Os dois processos (front na `PORT`, API interna na `API_PORT`) rodam no **mesmo
+recurso**. Só a porta do front fica exposta; o browser fala com a API por
+`/api/*`, que o Next reescreve para `http://127.0.0.1:${API_PORT}` — same-origin,
+sem CORS, cookie de sessão simples (`app/next.config.ts`).
 
-**Recurso da API**
-
-| Campo | Valor |
+| Campo (Coolify) | Valor |
 |---|---|
-| Install command | `npm install` |
+| Base directory | `/` |
+| Install command | `npm install` &nbsp;(o `postinstall` instala `app/` e `server/`) |
 | Build command | `npm run build` |
-| Start command | `./entrypoint.sh` &nbsp;(ou `npm run start:api`) |
+| Start command | `./entrypoint.sh` |
+| Porta exposta | `3000` (ou `$PORT`) |
 
-`entrypoint.sh` → `server/src/db/bootstrap.ts`: espera o Postgres responder,
-aplica `db/schema.sql` **só se o banco estiver vazio** (idempotente — seguro a
-cada deploy; não há migrations incrementais ainda), depois sobe a API.
-Env de runtime: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `CORS_ORIGIN` (= URL pública
-do front), `PORT` (a plataforma injeta). Opcional: `SEED_ON_INIT=true` popula o
-dataset de demonstração **na primeira subida** (contas com senha `senha123` —
-não use num ambiente real).
+`entrypoint.sh`:
+1. `server/dist/db/bootstrap.js` — espera o Postgres, aplica `db/schema.sql`
+   **só se o banco estiver vazio** (idempotente, seguro a cada deploy — não há
+   migrations incrementais ainda);
+2. `concurrently -k` sobe **front + API juntos** (se um cair, o container
+   reinicia).
 
-**Recurso do front**
+**Env de runtime:**
 
-| Campo | Valor |
+| Var | Para quê |
 |---|---|
-| Install command | `npm install` |
-| Build command | `npm run build` |
-| Start command | `npm run start:web` |
-
-`NEXT_PUBLIC_API_URL` (= URL pública da API) precisa estar no ambiente **de build**
-— o Next inlina essa variável no bundle.
-
-> Alternativa mono-recurso: subir só a API com `entrypoint.sh` e servir o front
-> de outro lugar (ou build estático). Não há proxy entre eles — o browser chama a
-> API direto via `NEXT_PUBLIC_API_URL`.
+| `DATABASE_URL` | Postgres |
+| `JWT_ACCESS_SECRET` | assina o access token |
+| `APP_URL` | URL pública do app — base dos links de e-mail (`/definir-senha?token=…`) |
+| `PORT` | porta do front (a plataforma injeta) |
+| `API_PORT` | porta **interna** da API (opcional, default `3333`) |
+| `SEED_ON_INIT=true` | opcional — popula o dataset de demo na 1ª subida (contas `senha123`; não use num ambiente real) |
+| `NEXT_PUBLIC_API_URL` | **não definir** neste modo — o default `/api` (proxy) é o certo |
 
 ## Status
 

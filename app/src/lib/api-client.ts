@@ -9,7 +9,10 @@
 //  - no 401, tentar UMA vez POST /auth/refresh e repetir a requisição
 //  - transformar erro do backend ({ error: { code, message } }) em Error
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
+// Default "/api": o browser fala com a mesma origem do front e o Next
+// reescreve para a API local (next.config.ts). Só se sobrescreve com
+// NEXT_PUBLIC_API_URL quando a API tem URL própria (dev sem proxy, etc.).
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 /** Access token em memória (não em localStorage — mitiga XSS). O
  * refresh vive num cookie httpOnly que o browser manda sozinho. */

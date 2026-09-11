@@ -136,7 +136,7 @@ export async function sendPasswordSetupLink(
     expiresAt: new Date(Date.now() + hours * 60 * 60 * 1000),
   });
 
-  const link = `${env.CORS_ORIGIN}/definir-senha?token=${rawToken}`;
+  const link = `${env.APP_URL}/definir-senha?token=${rawToken}`;
   await recordNotification({
     recipientUserId: user.id,
     type: "MANUAL_REMINDER", // não há tipo próprio no enum; reaproveitado
