@@ -336,14 +336,15 @@ quando formos reestruturar"). O plano detalhado dessa fase está em
 - O backend é um **servidor Express separado em `server/`**, subindo junto com o front
   via `concurrently` na raiz (`npm run dev`) — a regra "um comando só" segue valendo.
 - `db/schema.sql` é a fonte da verdade; `server/src/db/migrate.ts` aplica o arquivo
-  inteiro num banco limpo. Postgres local via `docker-compose.yml`.
+  inteiro num banco limpo. O PostgreSQL é externo — só `DATABASE_URL` no `server/.env`
+  (o `docker-compose.yml` foi removido; suba um Postgres do jeito que preferir).
 - Ver `decisoes.md` (seção "Fase 2 — Backend") para o porquê e os trade-offs.
 
 **Tickets B0–B8 (todos Done):**
 
 | Ticket | Entrega | Cobre |
 |---|---|---|
-| B0 | Scaffold `server/` (Express+TS+pg), Docker Compose, migrate/seed idempotentes, boot único, `app/src/lib/api-client.ts` | T001, T021 |
+| B0 | Scaffold `server/` (Express+TS+pg), migrate/seed idempotentes contra `DATABASE_URL`, boot único, `app/src/lib/api-client.ts` | T001, T021 |
 | B1 | Auth real (login/refresh/logout/reset), JWT + refresh rotativo, `GET /users/me`, CRUD de staff | T004, T017 (parcial) |
 | B2 | `GET /journey-stages`, `/idea-areas`, `/cohorts` | T003 (dados de referência) |
 | B3 | `POST /teams` (cadastro público, find-or-create por e-mail, LGPD), board com filtros, `/teams/mine`, detalhe com escopo por papel, transição de etapa (RN-01), notas | T005, T006, T007, T008, T019 |

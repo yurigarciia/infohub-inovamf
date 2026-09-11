@@ -11,12 +11,10 @@
     "typecheck": "npm --prefix server run typecheck",
     "test": "npm --prefix server test",
     "install:all": "npm --prefix app install && npm --prefix server install",
-    "db:up": "docker compose up -d db",
-    "db:down": "docker compose down",
     "db:migrate": "npm --prefix server run db:migrate",
     "db:reset": "npm --prefix server run db:reset",
     "db:seed": "npm --prefix server run db:seed",
-    "db:setup": "npm run db:up && npm --prefix server run db:reset && npm --prefix server run db:seed"
+    "db:setup": "npm --prefix server run db:reset && npm --prefix server run db:seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

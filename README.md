@@ -43,7 +43,7 @@ O InfoHub substitui o acompanhamento manual (planilhas + WhatsApp) de equipes de
 
 **Backend (`server/`)**
 - **Node + Express 5 + TypeScript** (ESM, `tsx` em dev)
-- **PostgreSQL** via **`pg` (node-postgres) + SQL puro** — **sem ORM, sem query builder** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
+- **PostgreSQL** (externo — a conexão vem de `DATABASE_URL`) via **`pg` (node-postgres) + SQL puro** — **sem ORM, sem query builder** (ver justificativa e trade-offs em [`decisoes.md`](decisoes.md))
 - Auth: `bcryptjs` + JWT de acesso curto (stateless) + refresh token opaco rotativo em cookie `httpOnly`
 - Upload de entregas: `multer` em disco (`server/uploads/`), servido em `/uploads`
 - Jobs agendados (RN-04, lembretes) num `setInterval` no próprio processo — `server/src/jobs/`
@@ -69,7 +69,6 @@ server/               # backend Express + pg (sem ORM)
     db/               # pool, migrate.ts (aplica db/schema.sql), seed.ts
     shared/           # errors, sql (query/one/tx)
 db/                   # schema.sql (FONTE DA VERDADE), diagram.dbml
-docker-compose.yml    # Postgres 16 local
 docs/                 # requisitos, modelagem de banco, plano de frontend
 package.json          # raiz — orquestra app + server + scripts de banco
 ```
@@ -109,25 +108,37 @@ Erros seguem o formato `{ "error": { "code", "message", "fields"? } }` (400 vali
 
 ## Como rodar (setup local)
 
-Pré-requisitos: **Node 20+** e **Docker** (Docker Desktop precisa estar rodando para o Postgres).
+Pré-requisitos: **Node 20+** e **um PostgreSQL acessível** — instalação local, um
+container que você suba por conta própria, ou um serviço gerenciado (Neon,
+Supabase, RDS…). A conexão vem de `DATABASE_URL` no `server/.env`; o repositório
+não sobe mais um banco pra você.
 
 ```bash
 npm install                  # deps da raiz (concurrently)
 npm run install:all          # deps de app/ e de server/
 cp server/.env.example server/.env
 cp app/.env.local.example app/.env.local
+# edite server/.env: aponte DATABASE_URL para o seu Postgres
 
-npm run db:up                # sobe o Postgres no Docker (porta 5432)
 npm run db:reset             # aplica db/schema.sql num banco limpo
 npm run db:seed              # popula dados de demo (todas as contas: senha "senha123")
-#   atalho: npm run db:setup  = db:up + db:reset + db:seed
+#   atalho: npm run db:setup  = db:reset + db:seed
 
 npm run dev                  # sobe front (:3000) e API (:3333) juntos (concurrently)
 ```
 
+<details><summary>Subir um Postgres rápido com Docker (opcional)</summary>
+
+```bash
+docker run -d --name infohub-db -e POSTGRES_USER=infohub -e POSTGRES_PASSWORD=infohub \
+  -e POSTGRES_DB=infohub -p 5432:5432 postgres:16-alpine
+```
+Isso bate com o `DATABASE_URL` de exemplo. Pare com `docker rm -f infohub-db`.
+</details>
+
 Contas do seed: `ana.souza@infohub.amf.br` (admin), `fernanda.ribeiro@infohub.amf.br` (mentor), `joao.alves@acad.amf.br` (aluno). O seed monta um cenário completo: 7 equipes espalhadas pelas 6 etapas, 15 tarefas em todos os status, entregas com histórico de versão, lembretes, e-mails e auditoria.
 
-Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), `npm run typecheck` / `npm test` (server), `npm run db:down`.
+Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), `npm run typecheck` / `npm test` (server), `npm run db:migrate` (aplica o schema sem dropar).
 
 ### Variáveis de ambiente (`server/.env`)
 
@@ -135,7 +146,7 @@ Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), 
 |---|---|---|
 | `PORT` | `3333` | porta da API |
 | `CORS_ORIGIN` | `http://localhost:3000` | origem do front liberada (cookies) |
-| `DATABASE_URL` | `postgresql://infohub:infohub@localhost:5432/infohub` | conexão Postgres (bate com o `docker-compose.yml`) |
+| `DATABASE_URL` | `postgresql://infohub:infohub@localhost:5432/infohub` | conexão com o seu Postgres (local, container próprio ou gerenciado; `?sslmode=require` quando o provedor exigir) |
 | `JWT_ACCESS_SECRET` | — (obrigatória) | assina o access token |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL_DAYS` | `15m` / `30` | validade dos tokens |
 | `BCRYPT_ROUNDS` | `10` | custo do hash de senha |
@@ -148,9 +159,9 @@ No front, `app/.env.local` só precisa de `NEXT_PUBLIC_API_URL=http://localhost:
 
 | Sintoma | Causa / solução |
 |---|---|
-| `db:up` falha ou trava | Docker Desktop não está rodando. |
-| API não sobe: "Não consegui conectar ao Postgres" | rode `npm run db:up` antes; confira se a porta 5432 já não está em uso por outro Postgres local. |
-| Porta 5432 ocupada | pare o Postgres local, ou mude a porta no `docker-compose.yml` **e** no `DATABASE_URL`. |
+| API não sobe: "Não consegui conectar ao Postgres" | `DATABASE_URL` errada ou o banco não está no ar. Teste com `psql "$DATABASE_URL" -c 'select 1'`. |
+| `db:reset` falha com erro de permissão de schema | o usuário do `DATABASE_URL` precisa poder `DROP SCHEMA public` / `CREATE SCHEMA` (use `db:migrate` se só quiser aplicar o schema num banco vazio). |
+| Provedor gerenciado recusa a conexão | falta `?sslmode=require` no fim da `DATABASE_URL`. |
 | Login sempre 401 depois de mexer no banco | rode `npm run db:seed` de novo (os testes de integração revogam tokens; o seed limpa tudo). |
 | `npm test` (server) falha em massa | o teste de auth é de integração — precisa do banco populado (`npm run db:setup`). |
 | Front carrega mas nada aparece / 401 no console | `app/.env.local` sem `NEXT_PUBLIC_API_URL`, ou a API não está no ar. |
