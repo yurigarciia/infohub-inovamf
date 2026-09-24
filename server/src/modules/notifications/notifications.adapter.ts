@@ -1,33 +1,30 @@
 import { env } from "../../config/env.js";
+import {
+  ConsoleEmailSender,
+  MailServiceEmailSender,
+  SkipDemoRecipients,
+  type EmailSender,
+} from "./email-senders.js";
+
+export type { EmailSender, OutgoingEmail } from "./email-senders.js";
 
 /**
- * Envio de e-mail transacional. Interface para trocar a implementação
- * sem tocar em quem dispara (Q7 — decisão: Resend). Nesta fase o
- * ConsoleEmailSender só loga; o registro no banco fica em
- * notifications.service (grava email_notifications de qualquer jeito).
+ * Escolhe o envio de e-mail pela configuração:
+ *  - MAIL_API_KEY definida -> mail-service (com a trava de contas de demo);
+ *  - senão                 -> só loga no console (dev).
+ * O registro em email_notifications é feito por notifications.service
+ * de qualquer jeito.
  */
-export interface OutgoingEmail {
-  to: string;
-  subject: string;
-  body: string;
+function createEmailSender(): EmailSender {
+  if (!env.MAIL_API_KEY) return new ConsoleEmailSender();
+  return new SkipDemoRecipients(
+    new MailServiceEmailSender({
+      baseUrl: env.MAIL_API_URL,
+      apiKey: env.MAIL_API_KEY,
+      appUrl: env.APP_URL,
+    }),
+    env.MAIL_SKIP_DOMAINS.split(","),
+  );
 }
 
-export interface EmailSender {
-  /** Devolve um id do provedor (ou null se falhou/mock). */
-  send(email: OutgoingEmail): Promise<string | null>;
-}
-
-class ConsoleEmailSender implements EmailSender {
-  async send(email: OutgoingEmail): Promise<string | null> {
-    console.log(
-      `[email] para=${email.to} assunto="${email.subject}"\n        ${email.body}`,
-    );
-    return `console-${Date.now()}`;
-  }
-}
-
-// Quando houver RESEND_API_KEY + domínio verificado, plugar aqui um
-// ResendEmailSender por trás desta mesma interface.
-export const emailSender: EmailSender = new ConsoleEmailSender();
-
-export const EMAIL_FROM = env.EMAIL_FROM;
+export const emailSender: EmailSender = createEmailSender();

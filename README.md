@@ -159,7 +159,8 @@ Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), 
 | `COOKIE_SECURE` | `true` em produção | flag Secure do cookie de refresh; `false` só p/ HTTP puro |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL_DAYS` | `15m` / `30` | validade dos tokens |
 | `BCRYPT_ROUNDS` | `10` | custo do hash de senha |
-| `RESEND_API_KEY` | vazio | vazio = usa o `ConsoleEmailSender` (loga + grava `email_notifications`) |
+| `MAIL_API_URL` / `MAIL_API_KEY` | mail-service / vazio | envio real de e-mail pelo mail-service (`POST /emails`, `x-api-key`). Sem a chave, só loga no console |
+| `MAIL_SKIP_DOMAINS` | `acad.amf.br,infohub.amf.br` | contas de demonstração (seed) **não** recebem e-mail real — só log |
 | `UPLOAD_DIR` / `MAX_UPLOAD_MB` | `uploads` / `50` | entregas de arquivo (RNF-04) |
 
 `INTERNAL_API_URL` (ou `API_PORT`) muda o alvo do proxy `/api/*` se a API não
@@ -225,6 +226,7 @@ sem CORS, cookie de sessão simples (`app/next.config.ts`).
 | `PORT` | porta do front (a plataforma injeta) |
 | `API_PORT` | porta **interna** da API (opcional, default `3333`) |
 | `COOKIE_SECURE` | `false` **somente** se o app for servido em `http://` puro (sem TLS); com HTTPS deixe em branco |
+| `MAIL_API_KEY` | chave do mail-service — habilita o envio real de e-mail (sem ela só loga). **Segredo: só nas envs do Coolify, nunca no git** |
 | `SEED_ON_INIT=true` | opcional — se o banco ainda não tem usuários, popula o dataset de demo (contas `senha123`; não use num ambiente real) |
 | `NEXT_PUBLIC_API_URL` | **não definir** neste modo — o default `/api` (proxy) é o certo |
 

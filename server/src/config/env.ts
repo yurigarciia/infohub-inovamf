@@ -56,8 +56,13 @@ const schema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
 
-  RESEND_API_KEY: z.string().optional().default(""),
-  EMAIL_FROM: z.string().default("InfoHub <no-reply@infohub.local>"),
+  // Serviço de e-mail (mail-service próprio, POST /emails com x-api-key).
+  // Sem MAIL_API_KEY os e-mails só são logados no console.
+  MAIL_API_URL: z.string().url().default("https://mail-service.southinovations.com.br"),
+  MAIL_API_KEY: optional(z.string().min(1)),
+  // Domínios das contas de DEMONSTRAÇÃO (seed): destinatários neles não
+  // recebem e-mail real — só log. Lista separada por vírgula; "" desliga.
+  MAIL_SKIP_DOMAINS: z.string().default("acad.amf.br,infohub.amf.br"),
 
   // 1º administrador criado no bootstrap quando ainda não existe nenhum (ver
   // db/essentials.ts). Troque a senha depois pelo "esqueci minha senha".
