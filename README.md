@@ -106,6 +106,13 @@ Acesso: **JWT** no header `Authorization: Bearer <accessToken>` (obtido no login
 | `GET /reports/dashboard?cohort=` | staff | indicadores agregados (RF-22/24) |
 
 Erros seguem o formato `{ "error": { "code", "message", "fields"? } }` (400 validação/zod, 401 sem sessão, 403 papel/escopo, 404, 409 conflito).
+Dados malformados (data inválida, URL não http(s), `limit` fora de 1–200, área inexistente, JSON quebrado) sempre voltam 4xx, nunca 500. `POST /auth/login` e `POST /auth/password-reset` têm limite de tentativas por IP (**429**; o app usa `trust proxy` para enxergar o IP real atrás do Coolify).
+
+**Regras que os testes de ponta a ponta fixaram:**
+- **Upload (RNF-04):** só PDF, PNG, JPEG e MP4, até `MAX_UPLOAD_MB` (50). A extensão gravada vem do *tipo*, nunca do nome enviado, e a assinatura do arquivo (magic bytes) precisa bater com o tipo — senão 400 e o arquivo é apagado. Os arquivos saem em `/uploads/*` (rewrite do Next para a API; `proxyClientMaxBodySize` = 60 MB em `next.config.ts`).
+- **Entregas:** só a versão mais recente (`is_current`) pode ser avaliada (409 nas antigas); o envio trava a linha da tarefa para não criar duas versões atuais em corrida.
+- **Prontidão (`is_ready_for_inovamf`):** equipe na etapa 6 com todas as tarefas da etapa 6 aprovadas; é recalculada ao criar tarefa, avaliar entrega e mudar de etapa.
+- **Prazo de tarefa** é data pura `YYYY-MM-DD` (sem fuso) de ponta a ponta — evita exibir um dia antes.
 
 ## Como rodar (setup local)
 
@@ -185,7 +192,11 @@ na API, sem o proxy.
 cd server && npm test        # vitest: regras do funil (RN-01), jobs (RN-04/RF-17), fluxo de auth
 ```
 
-O teste de auth é de integração e usa o banco populado — rode `npm run db:setup` antes.
+Os testes de auth são de integração e usa o banco populado — rode `npm run db:setup` antes.
+
+### Testes de ponta a ponta (QA)
+
+Além do vitest, o app foi validado contra o link da Coolify com duas suítes (API: 290 verificações; telas com Playwright: 60) cobrindo papéis, escopo por equipe, funil, tarefas, upload/links, datas, e-mail, rate limit e navegação. Resultado após a última correção: **API 290/290 e telas 60/60**, sem erro 5xx nem `pageerror`. Os dados de teste usam marcadores `[QA]` e são apagados ao final.
 
 ### Jobs agendados
 
@@ -224,10 +235,11 @@ sem CORS, cookie de sessão simples (`app/next.config.ts`).
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | 1º administrador (criado no boot se ainda não houver nenhum ADMIN; senha ≥ 8). Sem isso ninguém consegue entrar — a menos que use `SEED_ON_INIT` |
 | `APP_URL` | URL pública do app (a do Coolify, com `https://`) — base dos links de e-mail (`/definir-senha?token=…`) |
 | `PORT` | porta do front (a plataforma injeta) |
-| `API_PORT` | porta **interna** da API (opcional, default `3333`) |
+| `API_PORT` | porta **interna** da API (opcional, default `3333`). O Next grava esse valor **no build** (rewrites): mude-a e refaça o build |
 | `COOKIE_SECURE` | `false` **somente** se o app for servido em `http://` puro (sem TLS); com HTTPS deixe em branco |
 | `MAIL_API_KEY` | chave do mail-service — habilita o envio real de e-mail (sem ela só loga). **Segredo: só nas envs do Coolify, nunca no git** |
 | `SEED_ON_INIT=true` | opcional — se o banco ainda não tem usuários, popula o dataset de demo (contas `senha123`; não use num ambiente real) |
+| `UPLOAD_DIR` / `MAX_UPLOAD_MB` | pasta dos uploads (default `uploads`) e limite em MB (default 50). **O disco do container é efêmero:** monte um volume persistente nessa pasta, ou os arquivos somem a cada deploy |
 | `NEXT_PUBLIC_API_URL` | **não definir** neste modo — o default `/api` (proxy) é o certo |
 
 **Banco compartilhado.** O bootstrap só mexe no `DB_SCHEMA`: cria o schema, aplica as

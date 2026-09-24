@@ -127,3 +127,12 @@ Não. O Prisma continua planejado, mas só para a fase futura de reestruturaçã
 - **Registro.** A linha em `email_notifications` (+ auditoria) é gravada quando a entrega termina: `SENT` = "aceito e enfileirado" pelo mail-service (ele não expõe status de entrega), `FAILED` = tentativas esgotadas. O shutdown espera até 10 s pelos envios pendentes. Trade-off: um envio em andamento se perde se o processo cair (a tabela não guarda o corpo, então não dá para retomar do banco).
 - **Contas de demo.** Os e-mails do seed são fictícios, em domínios que podem existir; `MAIL_SKIP_DOMAINS` impede o envio real a eles (só log, `provider_message_id = demo-skip-…`).
 - **Segredo.** A chave é segredo de deploy (env do Coolify), nunca versionada.
+
+**Endurecimento pós-testes de ponta a ponta:** a suíte rodada na Coolify achou 17 problemas; as decisões que ficaram:
+- **Erros de entrada nunca são 500.** O `errorHandler` traduz Zod, Multer, body-parser e erros de dado do `pg` para 4xx; validadores compartilhados em `server/src/shared/validation.ts`.
+- **Prazo é data pura.** O `pg` devolve `DATE` como string (`YYYY-MM-DD`) e o front interpreta como data local — antes o fuso do servidor/browser deslocava o dia.
+- **Upload servido na mesma origem exige defesa:** extensão pelo tipo, checagem de assinatura, tipos restritos. Trade-off: só PDF/PNG/JPEG/MP4. O disco do container é efêmero; o ideal é volume persistente ou storage de objetos (fase futura).
+- **Concorrência:** `SELECT ... FOR UPDATE` na tarefa ao criar versão e ao avaliar, garantindo uma única versão atual e avaliação só da atual.
+- **Prontidão para o InovAMF** virou regra única (`refreshReadiness`), reavaliada em todo evento que a altera, em vez de só ao concluir a etapa 6.
+- **Rate limit** em login e reset de senha (em memória, por IP; não compartilhado entre réplicas — suficiente para um recurso único).
+- **Guarda de papel no front** (`RequireRole`) além da API: a API continua sendo a barreira real, o front só evita telas quebradas.
