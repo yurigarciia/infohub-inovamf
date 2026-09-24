@@ -17,8 +17,17 @@
 #   PORT                              (Coolify injeta; porta do Next)
 #   API_PORT                          (opcional, default 3333 — porta interna da API)
 #   SEED_ON_INIT=true                 (opcional — popula dados de demo na 1a subida)
+#
+# As vars podem vir do ambiente (Coolify) OU de um .env na raiz (dev /
+# self-host). server e Next também carregam o .env sozinhos; sourcear
+# aqui garante que `next start` enxergue PORT desde o começo.
 # ---------------------------------------------------------------------------
 set -e
+
+if [ -f .env ]; then
+  echo "[entrypoint] carregando .env da raiz"
+  set -a; . ./.env; set +a
+fi
 
 echo "[entrypoint] preparando o banco (aplica db/schema.sql só se estiver vazio)…"
 node server/dist/db/bootstrap.js

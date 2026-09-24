@@ -10,7 +10,7 @@
     "lint": "npm --prefix app run lint",
     "typecheck": "npm --prefix server run typecheck",
     "test": "npm --prefix server test",
-    "postinstall": "npm --prefix app install && npm --prefix server install",
+    "postinstall": "npm --prefix app install --include=dev && npm --prefix server install --include=dev",
     "install:all": "npm --prefix app install && npm --prefix server install",
     "db:migrate": "npm --prefix server run db:migrate",
     "db:reset": "npm --prefix server run db:reset",

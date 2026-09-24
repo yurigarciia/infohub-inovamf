@@ -1,5 +1,5 @@
 import type { CookieOptions, Response } from "express";
-import { env, isProd } from "../../config/env.js";
+import { cookieSecure, env } from "../../config/env.js";
 
 /**
  * Cookie do refresh token — compartilhado pelo módulo auth e pelo
@@ -14,7 +14,7 @@ export const REFRESH_COOKIE = "infohub_rt";
 const COOKIE_PATH = env.REFRESH_COOKIE_PATH;
 
 function opts(expires: Date): CookieOptions {
-  return { httpOnly: true, secure: isProd, sameSite: "lax", path: COOKIE_PATH, expires };
+  return { httpOnly: true, secure: cookieSecure, sameSite: "lax", path: COOKIE_PATH, expires };
 }
 
 export function setRefreshCookie(res: Response, token: string, expires: Date): void {

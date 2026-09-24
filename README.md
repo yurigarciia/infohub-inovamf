@@ -116,19 +116,18 @@ não sobe mais um banco pra você.
 
 ```bash
 npm install                  # instala a raiz + app/ + server/ (via postinstall)
-cp server/.env.example server/.env
-cp app/.env.local.example app/.env.local
-# edite server/.env: aponte DATABASE_URL para o seu Postgres
+cp .env.example .env         # um ÚNICO .env na raiz — ajuste DATABASE_URL
 
-npm run db:reset             # aplica db/schema.sql num banco limpo
+npm run db:reset             # recria SEU schema (DB_SCHEMA) e aplica db/schema.sql — recusa `public`
 npm run db:seed              # popula dados de demo (todas as contas: senha "senha123")
 #   atalho: npm run db:setup  = db:reset + db:seed
 
 npm run dev                  # sobe front (:3000) e API (:3333) juntos (concurrently)
 ```
 
-O front chama a API por `/api/*` e o Next reescreve para a API local
-(`app/next.config.ts`) — vale em dev e no deploy, sem CORS. Não precisa de
+Tudo lê o **`.env` da raiz** (server via `server/src/config/env.ts`, Next via
+`app/next.config.ts`). O front chama a API por `/api/*` e o Next reescreve para a
+API local — vale em dev e no deploy, sem CORS. Não precisa de
 `NEXT_PUBLIC_API_URL` a menos que queira bater direto na API.
 
 <details><summary>Subir um Postgres rápido com Docker (opcional)</summary>
@@ -144,23 +143,28 @@ Contas do seed: `ana.souza@infohub.amf.br` (admin), `fernanda.ribeiro@infohub.am
 
 Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), `npm run typecheck` / `npm test` (server), `npm run db:migrate` (aplica o schema sem dropar).
 
-### Variáveis de ambiente (`server/.env`)
+### Variáveis de ambiente (`.env` na raiz — ver `.env.example`)
 
 | Variável | Padrão | Para quê |
 |---|---|---|
-| `API_PORT` | `3333` | porta **interna** da API (o front usa `PORT`) |
+| `PORT` | `3000` | porta do front (Next); no deploy a plataforma injeta |
+| `API_PORT` | `3333` | porta **interna** da API (o Next reescreve `/api/*` pra ela) |
 | `APP_URL` | `http://localhost:3000` | URL pública do app — base dos links de e-mail |
 | `CORS_ORIGIN` | `http://localhost:3000` | só usada em acesso cross-origin à API (dev sem o proxy) |
 | `REFRESH_COOKIE_PATH` | `/` | path do cookie de refresh (cobre acesso direto e via `/api`) |
 | `DATABASE_URL` | `postgresql://infohub:infohub@localhost:5432/infohub` | conexão com o seu Postgres (local, container próprio ou gerenciado; `?sslmode=require` quando o provedor exigir) |
+| `DB_SCHEMA` | `infohub` | schema do Postgres onde ficam as tabelas (o pool fixa o `search_path`); num banco compartilhado, o seu |
 | `JWT_ACCESS_SECRET` | — (obrigatória) | assina o access token |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | vazio | 1º admin criado no bootstrap se não existir nenhum |
+| `COOKIE_SECURE` | `true` em produção | flag Secure do cookie de refresh; `false` só p/ HTTP puro |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL_DAYS` | `15m` / `30` | validade dos tokens |
 | `BCRYPT_ROUNDS` | `10` | custo do hash de senha |
 | `RESEND_API_KEY` | vazio | vazio = usa o `ConsoleEmailSender` (loga + grava `email_notifications`) |
 | `UPLOAD_DIR` / `MAX_UPLOAD_MB` | `uploads` / `50` | entregas de arquivo (RNF-04) |
 
-No front, `app/.env.local` normalmente fica **vazio** (o proxy `/api` é o default).
-`INTERNAL_API_URL` só muda o alvo do proxy se a API não estiver em `127.0.0.1:3333`.
+`INTERNAL_API_URL` (ou `API_PORT`) muda o alvo do proxy `/api/*` se a API não
+estiver em `127.0.0.1:3333`. `NEXT_PUBLIC_API_URL` só para o front bater direto
+na API, sem o proxy.
 
 ### Problemas comuns
 
@@ -208,17 +212,25 @@ sem CORS, cookie de sessão simples (`app/next.config.ts`).
 2. `concurrently -k` sobe **front + API juntos** (se um cair, o container
    reinicia).
 
-**Env de runtime:**
+**Env de runtime** (Coolify → *Environment Variables*):
 
 | Var | Para quê |
 |---|---|
-| `DATABASE_URL` | Postgres |
-| `JWT_ACCESS_SECRET` | assina o access token |
-| `APP_URL` | URL pública do app — base dos links de e-mail (`/definir-senha?token=…`) |
+| `DATABASE_URL` | string de conexão do Postgres |
+| `DB_SCHEMA` | **seu schema** no banco (ex.: `infohub_yuri`). Criado sozinho no 1º boot se faltar. Num banco compartilhado é o que isola você dos outros — nunca use `public` |
+| `NODE_ENV` | `production` |
+| `JWT_ACCESS_SECRET` | segredo longo e aleatório: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | 1º administrador (criado no boot se ainda não houver nenhum ADMIN; senha ≥ 8). Sem isso ninguém consegue entrar — a menos que use `SEED_ON_INIT` |
+| `APP_URL` | URL pública do app (a do Coolify, com `https://`) — base dos links de e-mail (`/definir-senha?token=…`) |
 | `PORT` | porta do front (a plataforma injeta) |
 | `API_PORT` | porta **interna** da API (opcional, default `3333`) |
-| `SEED_ON_INIT=true` | opcional — popula o dataset de demo na 1ª subida (contas `senha123`; não use num ambiente real) |
+| `COOKIE_SECURE` | `false` **somente** se o app for servido em `http://` puro (sem TLS); com HTTPS deixe em branco |
+| `SEED_ON_INIT=true` | opcional — se o banco ainda não tem usuários, popula o dataset de demo (contas `senha123`; não use num ambiente real) |
 | `NEXT_PUBLIC_API_URL` | **não definir** neste modo — o default `/api` (proxy) é o certo |
+
+**Banco compartilhado.** O bootstrap só mexe no `DB_SCHEMA`: cria o schema, aplica as
+tabelas se faltarem e garante áreas de ideia, modelos de tarefa e o 1º admin. `db:reset`
+e `db:seed` **recusam** o `public` e qualquer schema que não seja deste app.
 
 ## Status
 

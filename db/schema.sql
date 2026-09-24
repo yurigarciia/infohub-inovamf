@@ -4,7 +4,10 @@
 -- (ver decisoes.md) e as regras de negócio RN-01 a RN-04.
 -- =====================================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
+-- Sem CREATE EXTENSION: gen_random_uuid() é nativo desde o PostgreSQL 13.
+-- Este arquivo é aplicado no schema definido pelo search_path da conexão
+-- (DB_SCHEMA — ver server/src/db/migrate.ts), então as tabelas abaixo não
+-- levam prefixo de schema.
 
 -- ---------------------------------------------------------------------
 -- SOFT DELETE (exclusão lógica) — as entidades do "núcleo" operacional

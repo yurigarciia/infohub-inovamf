@@ -1,15 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { env } from "../config/env.js";
+import { ensureAdmin, ensureEssentials } from "./essentials.js";
 import { closePool, pool } from "./pool.js";
 
 /**
  * Bootstrap de deploy (container / Coolify). Roda ANTES de subir a API:
  *
  *   1. espera o Postgres responder (o banco pode ainda estar subindo);
- *   2. se o schema não existe (banco vazio), aplica `db/schema.sql`;
- *   3. se já existe, não faz nada — seguro de rodar a cada deploy;
- *   4. com SEED_ON_INIT=true, popula o dataset de demo só na primeira vez.
+ *   2. cria o schema DB_SCHEMA se faltar (`CREATE SCHEMA IF NOT EXISTS`);
+ *   3. se as tabelas ainda não existem, aplica `db/schema.sql` nesse schema;
+ *   4. SEED_ON_INIT=true + nenhum usuário ainda -> dataset de demonstração;
+ *   5. garante os dados essenciais (áreas, modelos de tarefa) e o 1º ADMIN
+ *      (ADMIN_EMAIL/ADMIN_PASSWORD) — tudo idempotente, seguro a cada deploy.
  *
  * NÃO é um sistema de migrations incrementais: o schema.sql não tem
  * `IF NOT EXISTS`, por isso a checagem de "banco vazio" antes de aplicar.
@@ -32,30 +36,42 @@ async function waitForDb(): Promise<void> {
   }
 }
 
+// O pool fixa search_path = DB_SCHEMA, então 'users' resolve só nele (nunca no public).
 async function schemaExists(): Promise<boolean> {
   const { rows } = await pool.query<{ reg: string | null }>(
-    "SELECT to_regclass('public.users') AS reg",
+    "SELECT to_regclass('users') AS reg",
   );
   return rows[0]?.reg != null;
+}
+
+async function hasUsers(): Promise<boolean> {
+  const { rowCount } = await pool.query("SELECT 1 FROM users LIMIT 1");
+  return (rowCount ?? 0) > 0;
 }
 
 async function bootstrap(): Promise<void> {
   await waitForDb();
 
+  // DB_SCHEMA já é validado como identificador simples em config/env.ts.
+  await pool.query(`CREATE SCHEMA IF NOT EXISTS "${env.DB_SCHEMA}"`);
+
   if (await schemaExists()) {
-    console.log("[bootstrap] schema já presente — nada a aplicar.");
-    return;
+    console.log(`[bootstrap] schema "${env.DB_SCHEMA}" já presente — nada a aplicar.`);
+  } else {
+    console.log(`[bootstrap] schema "${env.DB_SCHEMA}" vazio — aplicando ${SCHEMA_PATH} …`);
+    await pool.query(await readFile(SCHEMA_PATH, "utf8"));
+    console.log("[bootstrap] schema aplicado.");
   }
 
-  console.log(`[bootstrap] banco vazio — aplicando ${SCHEMA_PATH} …`);
-  await pool.query(await readFile(SCHEMA_PATH, "utf8"));
-  console.log("[bootstrap] schema aplicado.");
-
-  if (process.env.SEED_ON_INIT === "true") {
-    console.log("[bootstrap] SEED_ON_INIT=true — populando dados de demonstração…");
+  // "1ª subida" = ainda sem usuários (não depende de o schema ter acabado de ser criado)
+  if (process.env.SEED_ON_INIT === "true" && !(await hasUsers())) {
+    console.log("[bootstrap] SEED_ON_INIT=true e banco sem usuários — populando dados de demonstração…");
     const { seed } = await import("./seed.js");
     await seed();
   }
+
+  await ensureEssentials();
+  await ensureAdmin();
 }
 
 bootstrap()

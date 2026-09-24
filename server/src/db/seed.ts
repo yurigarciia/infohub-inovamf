@@ -2,7 +2,9 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { env } from "../config/env.js";
-import { closePool } from "./pool.js";
+import { closePool, pool } from "./pool.js";
+import { DEFAULT_AREAS, DEFAULT_TEMPLATES } from "./essentials.js";
+import { assertSafeToSeed } from "./schema-guard.js";
 import { tx } from "../shared/sql.js";
 
 /**
@@ -41,13 +43,8 @@ const STAGES = [
   [6, "Encontro 4 - Pitch e inscrição"],
 ] as const;
 
-const AREAS = [
-  [1, "Educação"],
-  [2, "Saúde"],
-  [3, "Tecnologia"],
-  [4, "Sustentabilidade"],
-  [5, "Finanças"],
-] as const;
+// mesmas listas do bootstrap (essentials.ts); aqui com ids fixos
+const AREAS = DEFAULT_AREAS.map((name, i) => [i + 1, name] as const);
 
 interface SeedUser {
   slug: string;
@@ -141,12 +138,9 @@ const NOTES: [string, string, string, number][] = [
 ];
 
 // [templateSlug, stageId, title, description]
-const TEMPLATES: [string, number, string, string][] = [
-  ["template-3", 3, "Definir problema, público-alvo e solução", "Documento curto descrevendo o problema, o público-alvo e a solução inicial discutidos no Encontro 1."],
-  ["template-4", 4, "Enviar Value Proposition Design", "Anexar o Value Proposition Design construído no Encontro 2, em PDF ou imagem."],
-  ["template-5", 5, "Enviar Business Model Canvas", "Anexar o Business Model Canvas construído no Encontro 3, em PDF ou imagem."],
-  ["template-6", 6, "Enviar Pitch Vídeo e conferência de documentos", "Link do Pitch Vídeo (YouTube/Drive) + conferência final do Canvas, VPD e dados de todos os integrantes."],
-];
+const TEMPLATES: [string, number, string, string][] = DEFAULT_TEMPLATES.map(
+  ([stage, title, description]) => [`template-${stage}`, stage, title, description],
+);
 
 interface SeedTask {
   slug: string; team: string; stage: number; template: string | null;
@@ -223,6 +217,8 @@ const EMAILS: SeedEmail[] = [
 ];
 
 export async function seed(): Promise<void> {
+  // num banco compartilhado, o TRUNCATE só pode atingir o schema deste app
+  await assertSafeToSeed(pool);
   const passwordHash = await bcrypt.hash(PASSWORD, env.BCRYPT_ROUNDS);
 
   await tx(async (c) => {
