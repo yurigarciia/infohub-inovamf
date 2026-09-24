@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { pool } from "../../db/pool.js";
 import { maybeOne, query, tx } from "../../shared/sql.js";
 
 /**
@@ -356,7 +357,7 @@ export async function updateCurrentStage(
   const r = await client.query<TeamRow>(
     `UPDATE teams AS t
         SET current_stage_id = $2,
-            is_ready_for_inovamf = CASE WHEN $2 = 6 THEN t.is_ready_for_inovamf ELSE false END,
+            is_ready_for_inovamf = false, -- recalculado por refreshReadiness
             updated_at = now()
       WHERE t.id = $1 AND t.deleted_at IS NULL
       RETURNING ${TEAM_COLS}`,
@@ -382,6 +383,48 @@ export async function insertNote(
 export async function listAdminIds(): Promise<string[]> {
   const rows = await query<{ id: string }>(`SELECT id FROM users WHERE role = 'ADMIN'`);
   return rows.map((r) => r.id);
+}
+
+/** Área de ideia existe e está ativa (não excluída). */
+export async function areaExists(id: number): Promise<boolean> {
+  const row = await maybeOne<{ x: number }>(
+    "SELECT 1 AS x FROM idea_areas WHERE id = $1 AND deleted_at IS NULL",
+    [id],
+  );
+  return row !== null;
+}
+
+/**
+ * Regra do requisito: ao concluir a Etapa 6 com TODOS os entregáveis
+ * aprovados a equipe é marcada "Pronta para o InovAMF". Recalcula a partir
+ * do estado atual — pronta = está na etapa 6, tem ao menos 1 tarefa da etapa
+ * 6 e nenhuma delas (ativa) está fora de APPROVED. Chamado quando algo que
+ * afeta isso muda (etapa, revisão, nova tarefa). Devolve se o valor MUDOU.
+ */
+export async function refreshReadiness(
+  teamId: string,
+  db: { query: PoolClient["query"] } = pool,
+): Promise<{ changed: boolean; ready: boolean }> {
+  const r = await db.query(
+    `WITH calc AS (
+       SELECT t.id,
+              (t.current_stage_id = 6
+               AND EXISTS (SELECT 1 FROM tasks k
+                            WHERE k.team_id = t.id AND k.stage_id = 6 AND k.deleted_at IS NULL)
+               AND NOT EXISTS (SELECT 1 FROM tasks k
+                                WHERE k.team_id = t.id AND k.stage_id = 6 AND k.deleted_at IS NULL
+                                  AND k.status <> 'APPROVED')) AS ready
+         FROM teams t
+        WHERE t.id = $1 AND t.deleted_at IS NULL
+     )
+     UPDATE teams t
+        SET is_ready_for_inovamf = c.ready, updated_at = now()
+       FROM calc c
+      WHERE t.id = c.id AND t.is_ready_for_inovamf IS DISTINCT FROM c.ready
+      RETURNING t.is_ready_for_inovamf AS ready`,
+    [teamId],
+  );
+  return { changed: (r.rowCount ?? 0) > 0, ready: (r.rows[0] as { ready?: boolean } | undefined)?.ready ?? false };
 }
 
 // --- soft delete ------------------------------------------------------

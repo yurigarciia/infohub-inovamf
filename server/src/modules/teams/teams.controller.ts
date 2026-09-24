@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { UnauthorizedError } from "../../shared/errors.js";
 import { setRefreshCookie } from "../auth/auth.cookie.js";
+import { requiredText } from "../../shared/validation.js";
 import { assertUuid } from "../users/users.service.js";
 import * as service from "./teams.service.js";
 
@@ -79,7 +80,7 @@ export async function advanceStage(req: Request, res: Response): Promise<void> {
   res.json(await service.advanceTeamStage(actorOf(req), id, toStageId));
 }
 
-const noteSchema = z.object({ content: z.string().min(1) });
+const noteSchema = z.object({ content: requiredText(5000) });
 
 export async function addNote(req: Request, res: Response): Promise<void> {
   const id = assertUuid(req.params.id!);

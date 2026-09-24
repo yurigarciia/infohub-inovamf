@@ -20,6 +20,11 @@ import { usersRoutes } from "./modules/users/users.routes.js";
 export function createApp(): Express {
   const app = express();
 
+  // Atrás do Traefik e do proxy do Next o socket é sempre um IP interno; confiar
+  // nos saltos privados faz req.ip ser o do cliente (X-Forwarded-For) — usado
+  // no rate limit. Um IP público forjando o header não é confiado.
+  app.set("trust proxy", "loopback, linklocal, uniquelocal");
+
   app.use(helmet());
   app.use(
     cors({

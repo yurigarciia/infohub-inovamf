@@ -2,6 +2,7 @@
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AlunoSidebar } from "@/components/aluno/aluno-sidebar";
+import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/lib/session";
 import { UserRole } from "@/types";
 
@@ -18,7 +19,9 @@ export default function EquipeDetailLayout({ children }: LayoutProps<"/equipes">
     <div className="flex flex-1 flex-col md:flex-row">
       {user?.role === UserRole.STUDENT && <AlunoSidebar />}
       {(user?.role === UserRole.ADMIN || user?.role === UserRole.MENTOR) && <AdminSidebar />}
-      <div className="flex flex-1 flex-col overflow-x-hidden bg-neutral-50">{children}</div>
+      <div className="flex flex-1 flex-col overflow-x-hidden bg-neutral-50">
+        <RequireRole roles={[UserRole.ADMIN, UserRole.MENTOR, UserRole.STUDENT]}>{children}</RequireRole>
+      </div>
     </div>
   );
 }

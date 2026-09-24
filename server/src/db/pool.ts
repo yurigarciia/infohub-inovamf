@@ -1,6 +1,11 @@
 import pg from "pg";
 import { env } from "../config/env.js";
 
+// DATE (oid 1082) volta como string "AAAA-MM-DD". O parser padrão do pg cria um Date
+// à meia-noite no fuso do PROCESSO: no container (UTC) o prazo virava 00:00Z e, no
+// navegador em horário de Brasília, aparecia um dia ANTES. Data pura não tem fuso.
+pg.types.setTypeParser(1082, (value: string) => value);
+
 /**
  * Pool de conexões do node-postgres (singleton). Todo acesso ao banco
  * passa por aqui — nenhum módulo cria sua própria conexão.

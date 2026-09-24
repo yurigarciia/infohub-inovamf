@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { authRequired } from "../../middleware/auth.js";
 import { requireRole } from "../../middleware/requireRole.js";
+import { limitQuery } from "../../shared/validation.js";
 import { getRecentAuditLogs } from "./audit.service.js";
 
 export const auditRoutes = Router();
@@ -12,7 +13,7 @@ auditRoutes.get(
   authRequired,
   requireRole("ADMIN", "MENTOR"),
   async (req: Request, res: Response) => {
-    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const limit = limitQuery.parse(req.query.limit);
     res.json(await getRecentAuditLogs(limit));
   },
 );

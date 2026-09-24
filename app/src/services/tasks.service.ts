@@ -4,6 +4,7 @@
 // convertidas para Date aqui na fronteira.
 
 import { apiFetch } from "@/lib/api-client";
+import { parseDateOnly, toDateOnlyString } from "@/lib/format";
 import { ReviewStatus } from "@/types";
 import type {
   Task,
@@ -86,7 +87,7 @@ const toUser = (u: RawUser): User => ({
 
 const toTask = (t: RawTask): Task => ({
   ...t,
-  dueDate: new Date(t.dueDate),
+  dueDate: parseDateOnly(t.dueDate), // data pura, sem fuso
   createdAt: new Date(t.createdAt),
   updatedAt: new Date(t.updatedAt),
 });
@@ -112,7 +113,7 @@ const toDetails = (t: RawTaskDetails): TaskWithDetails => ({
   reminders: t.reminders.map(toReminder),
 });
 
-const toDateOnly = (d: Date): string => d.toISOString().slice(0, 10);
+const toDateOnly = toDateOnlyString;
 
 // --- leitura ---------------------------------------------------
 

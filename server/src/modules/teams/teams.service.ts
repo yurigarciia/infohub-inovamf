@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { PoolClient } from "pg";
 import { env } from "../../config/env.js";
 import { tx } from "../../shared/sql.js";
-import { ForbiddenError, NotFoundError } from "../../shared/errors.js";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../../shared/errors.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { assertTransitionAllowed } from "../journey/journey.rules.js";
 import { recordNotification } from "../notifications/notifications.service.js";
@@ -167,6 +167,10 @@ export async function createTeamFromInscription(
   input: CreateTeamInput,
   ctx: SessionContext,
 ): Promise<CreateTeamResult> {
+  if (!(await repo.areaExists(input.areaId))) {
+    throw new BadRequestError("Área de ideia inválida.");
+  }
+
   // Senha placeholder: password_hash é NOT NULL, mas a conta nasce sem
   // senha conhecível — o acesso vem pelo link de "primeiro acesso"
   // (e-mail enviado abaixo). Um hash aleatório por request basta.
@@ -282,7 +286,9 @@ export async function advanceTeamStage(
     await client.query("SELECT id FROM teams WHERE id = $1 FOR UPDATE", [teamId]);
     await repo.closeOpenStageHistory(client, teamId);
     await repo.openStageHistory(client, teamId, toStageId, actor.id);
-    return repo.updateCurrentStage(client, teamId, toStageId);
+    const moved = await repo.updateCurrentStage(client, teamId, toStageId);
+    await repo.refreshReadiness(teamId, client); // etapa 6 + entregáveis aprovados => "pronta"
+    return moved;
   });
 
   await recordAuditLog({
@@ -292,7 +298,7 @@ export async function advanceTeamStage(
     action: "STAGE_ADVANCED",
     metadata: { fromStageId: team.currentStageId, toStageId },
   });
-  return updated;
+  return (await repo.getTeam(teamId)) ?? updated; // já com isReadyForInovamf recalculado
 }
 
 /** RF-10 — anotação interna (nunca exposta ao aluno). */

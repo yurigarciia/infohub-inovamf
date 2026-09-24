@@ -274,6 +274,10 @@ export async function insertSubmission(
     isExternalLink: boolean;
   },
 ): Promise<{ id: string; version: number }> {
+  // Serializa as entregas da MESMA tarefa: sem o lock, duas requisições simultâneas leem o mesmo
+  // MAX(version), geram a mesma versão e deixam mais de uma como "atual". O lock dura até o
+  // COMMIT da transação de quem chama (tx()).
+  await client.query("SELECT id FROM tasks WHERE id = $1 FOR UPDATE", [input.taskId]);
   await client.query(
     `UPDATE task_submissions SET is_current = false WHERE task_id = $1 AND deleted_at IS NULL`,
     [input.taskId],

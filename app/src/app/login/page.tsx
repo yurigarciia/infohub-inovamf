@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { DemoProfilePicker } from "./demo-profile-picker";
 /** RF-01: login real (B1) com e-mail e senha. A senha é verificada pelo
  * backend (POST /auth/login); o refresh token vem em cookie httpOnly e
  * o access token fica em memória (ver lib/api-client + services/auth). */
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const { signIn } = useSession();
   const [email, setEmail] = useState("");
@@ -27,8 +27,15 @@ export default function LoginPage() {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
 
+  // ?next=/rota — só caminho interno (evita redirecionar para outro site)
+  const rawNext = useSearchParams().get("next");
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("\\")
+      ? rawNext
+      : null;
+
   function goToUserArea(role: UserRole) {
-    router.push(role === UserRole.STUDENT ? "/aluno" : "/admin");
+    router.push(next ?? (role === UserRole.STUDENT ? "/aluno" : "/admin"));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -157,5 +164,14 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** useSearchParams (?next=) exige um limite de Suspense na página. */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

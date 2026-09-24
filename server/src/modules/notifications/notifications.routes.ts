@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { authRequired } from "../../middleware/auth.js";
 import { UnauthorizedError } from "../../shared/errors.js";
+import { limitQuery } from "../../shared/validation.js";
 import { getNotificationsForUser } from "./notifications.service.js";
 
 export const notificationsRoutes = Router();
@@ -12,7 +13,7 @@ notificationsRoutes.get(
   authRequired,
   async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError();
-    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const limit = limitQuery.parse(req.query.limit);
     res.json(await getNotificationsForUser(req.user.id, limit));
   },
 );

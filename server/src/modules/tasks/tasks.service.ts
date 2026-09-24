@@ -1,9 +1,10 @@
 import { tx } from "../../shared/sql.js";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../../shared/errors.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../shared/errors.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { recordNotification } from "../notifications/notifications.service.js";
 import { assertCanManageTeam, assertCanSeeTeam } from "../teams/teams.service.js";
 import type { Actor } from "../teams/teams.service.js";
+import * as teamsRepo from "../teams/teams.repository.js";
 import * as repo from "./tasks.repository.js";
 import type { ReminderRow, SubmissionRow, TaskRow, TaskTemplateRow } from "./tasks.repository.js";
 
@@ -112,6 +113,7 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
     metadata: { teamId: task.teamId, stageId: task.stageId, fromTemplate: templateId !== null },
   });
 
+  await syncReadiness(actor.id, input.teamId); // nova tarefa da etapa 6 desmarca "pronta"
   for (const uid of await repo.teamMemberIds(input.teamId)) {
     await recordNotification({
       recipientUserId: uid,
@@ -218,8 +220,23 @@ export async function reviewSubmission(
   const task = await repo.getTask(sub.taskId);
   if (!task) throw new NotFoundError("Tarefa não encontrada.");
   await assertCanManageTeam(actor, task.teamId);
+  // Avaliar uma versão antiga sobrescreveria o status da tarefa com uma decisão
+  // sobre um arquivo que já foi substituído.
+  if (!sub.isCurrent) {
+    throw new ConflictError("Só a versão mais recente da entrega pode ser avaliada.");
+  }
 
   await tx(async (client) => {
+    // trava a tarefa e re-checa DENTRO da transação: uma entrega nova pode ter chegado
+    // entre a leitura acima e agora (senão a decisão valeria para uma versão substituída)
+    await client.query("SELECT id FROM tasks WHERE id = $1 FOR UPDATE", [task.id]);
+    const cur = await client.query<{ is_current: boolean }>(
+      "SELECT is_current FROM task_submissions WHERE id = $1 AND deleted_at IS NULL",
+      [submissionId],
+    );
+    if (!cur.rows[0]?.is_current) {
+      throw new ConflictError("Só a versão mais recente da entrega pode ser avaliada.");
+    }
     await repo.reviewSubmission(client, {
       id: submissionId,
       decision: input.decision,
@@ -246,7 +263,21 @@ export async function reviewSubmission(
     action: input.decision === "APPROVED" ? "SUBMISSION_APPROVED" : "SUBMISSION_REJECTED",
     metadata: { taskId: task.id },
   });
+  await syncReadiness(actor.id, task.teamId);
   return (await repo.getSubmission(submissionId))!;
+}
+
+/** Recalcula "Pronta para o InovAMF" e audita quando o estado muda. */
+async function syncReadiness(actorId: string, teamId: string): Promise<void> {
+  const { changed, ready } = await teamsRepo.refreshReadiness(teamId);
+  if (changed) {
+    await recordAuditLog({
+      actorUserId: actorId,
+      entityType: "team",
+      entityId: teamId,
+      action: ready ? "TEAM_MARKED_READY" : "TEAM_READY_REVOKED",
+    });
+  }
 }
 
 // --- lembretes (RF-17/20) — staff --------------------------

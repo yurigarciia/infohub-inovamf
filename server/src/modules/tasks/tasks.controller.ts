@@ -1,22 +1,24 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { BadRequestError, UnauthorizedError } from "../../shared/errors.js";
+import { dateOnly, httpUrl, requiredText } from "../../shared/validation.js";
 import { assertUuid } from "../users/users.service.js";
 import type { Actor } from "../teams/teams.service.js";
 import * as service from "./tasks.service.js";
-import { publicUrl } from "./upload.js";
+import { discardUpload, publicUrl, verifyUpload } from "./upload.js";
 
 function actorOf(req: Request): Actor {
   if (!req.user) throw new UnauthorizedError();
   return { id: req.user.id, role: req.user.role };
 }
 
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use o formato AAAA-MM-DD.");
 
 // --- templates ----------------------------------------------------
 
 export async function listTemplates(req: Request, res: Response): Promise<void> {
-  const stageId = req.query.stageId ? Number(req.query.stageId) : undefined;
+  const { stageId } = z
+    .object({ stageId: z.coerce.number().int().min(1).max(6).optional() })
+    .parse(req.query);
   res.json(await service.getTemplates(stageId));
 }
 
@@ -35,8 +37,8 @@ const createSchema = z.object({
   teamId: z.string().uuid(),
   stageId: z.number().int().min(1).max(6),
   templateId: z.string().uuid().optional(),
-  title: z.string().min(1),
-  description: z.string().optional(),
+  title: requiredText(200),
+  description: z.string().max(5000).optional(),
   dueDate: dateOnly,
 });
 
@@ -46,7 +48,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 }
 
 const updateSchema = z.object({
-  title: z.string().min(1).optional(),
+  title: requiredText(200).optional(),
   description: z.string().optional(),
   dueDate: dateOnly.optional(),
 });
@@ -58,27 +60,34 @@ export async function update(req: Request, res: Response): Promise<void> {
 
 // --- entregas -------------------------------------------------
 
-const externalLinkSchema = z.object({ externalLink: z.string().url() });
+const externalLinkSchema = z.object({ externalLink: httpUrl });
 
 export async function submit(req: Request, res: Response): Promise<void> {
   const id = assertUuid(req.params.id!);
   const actor = actorOf(req);
 
-  if (req.file) {
+  try {
+    if (req.file) {
+      await verifyUpload(req.file);
+      res
+        .status(201)
+        .json(
+          await service.submitTask(actor, id, {
+            fileUrl: publicUrl(req.file.filename),
+            isExternalLink: false,
+          }),
+        );
+      return;
+    }
+    const { externalLink } = externalLinkSchema.parse(req.body);
     res
       .status(201)
-      .json(
-        await service.submitTask(actor, id, {
-          fileUrl: publicUrl(req.file.filename),
-          isExternalLink: false,
-        }),
-      );
-    return;
+      .json(await service.submitTask(actor, id, { fileUrl: externalLink, isExternalLink: true }));
+  } catch (err) {
+    // o multer já gravou o arquivo antes das checagens de permissão: não deixa órfão
+    await discardUpload(req.file);
+    throw err;
   }
-  const { externalLink } = externalLinkSchema.parse(req.body);
-  res
-    .status(201)
-    .json(await service.submitTask(actor, id, { fileUrl: externalLink, isExternalLink: true }));
 }
 
 const reviewSchema = z.object({
