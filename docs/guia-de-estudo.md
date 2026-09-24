@@ -17,7 +17,7 @@ inovação). Há três papéis:
 |---|---|
 | **Aluno** (líder/integrante) | cadastra a equipe, vê suas tarefas, **entrega** arquivo ou link |
 | **Mentor** | acompanha as equipes atribuídas a ele, cria tarefas, avalia entregas, move etapa |
-| **Administrador** | tudo do mentor em todas as equipes + gerencia contas de mentor/admin, auditoria, dashboard |
+| **Administrador** | tudo do mentor em todas as equipes + gerencia contas de mentor/admin; o menu de Dashboard e Auditoria aparece só para ele |
 
 **As 6 etapas:** 1 Envio da ideia → 2 Contato com a equipe → 3 Encontro 1
 (entendendo a ideia) → 4 Encontro 2 (proposta de valor) → 5 Encontro 3 (modelo
@@ -79,7 +79,7 @@ Arquivos transversais: `middleware/auth.ts` (valida o JWT), `requireRole.ts`
 2. Next reescreve para a API.
 3. `tasks.routes.ts`: passa por `authRequired` (JWT válido?) e `requireRole("ADMIN","MENTOR")`.
 4. `tasks.controller.ts → review`: zod valida `{ decision, reviewComment }`.
-5. `tasks.service.ts → reviewSubmission`: abre **transação**, trava a linha da tarefa (`FOR UPDATE`), confere se é a versão atual, grava a decisão, atualiza `tasks.status`, recalcula a prontidão da equipe, escreve em `audit_logs` e cria a notificação por e-mail.
+5. `tasks.service.ts → reviewSubmission`: confere se o usuário pode gerenciar aquela equipe e se a entrega é a versão atual (senão 409). Depois abre uma **transação** que trava a linha da tarefa (`FOR UPDATE`), re-confere a versão atual, grava a decisão (`APPROVED`/`REJECTED` + comentário) e atualiza `tasks.status`. **Fora da transação**, em seguida: notifica por e-mail quem enviou, escreve em `audit_logs` e recalcula a prontidão da equipe (`syncReadiness`).
 6. Resposta JSON. Se algo falha, o `errorHandler` devolve `{ error: { code, message } }` com o status certo.
 
 ---
@@ -88,8 +88,8 @@ Arquivos transversais: `middleware/auth.ts` (valida o JWT), `requireRole.ts`
 
 **Login** (`POST /auth/login`, `auth.service.ts`)
 - Senha comparada com **bcrypt** (hash em `users.password_hash`, nunca a senha).
-- Devolve um **access token (JWT, ~15 min)**, *stateless*, que o front guarda **só em memória** e manda em `Authorization: Bearer …`.
-- E um **refresh token** (aleatório, 32 bytes) num **cookie httpOnly** `infohub_rt`. No banco fica só o **hash SHA-256** (`refresh_tokens`).
+- Devolve um **access token (JWT, 15 min por padrão, `ACCESS_TOKEN_TTL`)**, *stateless*, que o front guarda **só em memória** e manda em `Authorization: Bearer …`.
+- E um **refresh token** (aleatório, 32 bytes) num **cookie httpOnly** `infohub_rt`. No banco fica só o **hash SHA-256** (`refresh_tokens`). A sessão dura 30 dias (`REFRESH_TOKEN_TTL_DAYS`), renovada a cada rotação.
 
 **Refresh** (`POST /auth/refresh`)
 - Cada uso **rotaciona**: o token antigo é revogado (`revoked_at`, `replaced_by_id`) e um novo é emitido.
@@ -140,11 +140,13 @@ Base: `/api` (no browser) ou `:3333` (direto na API). "Staff" = ADMIN ou MENTOR.
 | **Criar/editar tarefa (RF-11/12)** | `POST /tasks`, `PATCH /tasks/:id` | staff | `tasks.service` |
 | Tarefas da equipe / do aluno (RF-13) | `GET /teams/:teamId/tasks`, `GET /tasks/mine` | conforme escopo | `tasks.service` |
 | **Entregar (RF-14/16)** | `POST /tasks/:id/submissions` | aluno da equipe | `tasks.controller.submit` + `upload.ts` |
-| **Avaliar entrega (RF-15)** | `POST /submissions/:id/review` | staff | `tasks.service.reviewSubmission` |
+| **Avaliar entrega (RF-15)** | `POST /submissions/:id/review` | staff (mentor só das suas equipes) | `tasks.service.reviewSubmission` |
 | **Lembretes (RF-17/20)** | `POST /tasks/:id/reminders` (`{remindAt}` agenda; `{manual:true}` dispara já) | staff | `tasks.service` |
 | Auditoria (RNF-05) | `GET /audit-logs?limit=` | staff | `audit.*` |
 | Notificações do usuário | `GET /notifications/mine?limit=` | logado | `notifications.*` |
 | Dashboard (RF-22/24) | `GET /reports/dashboard?cohort=` | staff | `reports.repository` (COUNT/GROUP BY) |
+
+Observação: `/audit-logs` e `/reports/dashboard` aceitam ADMIN **e** MENTOR na API (o front só mostra esses menus ao admin). Se perguntarem, essa é a diferença entre "o que a tela mostra" e "o que a API permite".
 
 Erros têm sempre o formato `{ "error": { "code", "message", "fields"? } }`:
 400 validação, 401 sem sessão, 403 sem permissão/escopo, 404, 409 conflito,
@@ -156,12 +158,14 @@ Erros têm sempre o formato `{ "error": { "code", "message", "fields"? } }`:
 
 - **RN-01 — transição de etapa** (`journey/journey.rules.ts`, `assertTransitionAllowed`): destino entre 1 e 6, diferente da atual, e **no máximo 1 passo** (avança ou retrocede uma por vez). Ao mudar: fecha o registro da etapa anterior e abre o novo em `team_stage_history`, atualiza `teams.current_stage_id`, grava auditoria.
 - **RN-04 — tarefa atrasada** (`jobs/rules.ts` + `jobs/scheduler.ts`): um agendador dentro do processo da API (`setInterval`, a cada 5 min) marca como `LATE` a tarefa aberta cujo prazo passou e **dispara os lembretes** que chegaram na hora. Está isolado em `jobs/` para virar worker separado no futuro.
-- **Ciclo da tarefa:** `PENDING → IN_PROGRESS → SUBMITTED → APPROVED | REJECTED` (e `LATE` por prazo).
+- **Ciclo da tarefa:** nasce `PENDING`; quando o aluno entrega vira `SUBMITTED`; o avaliador a leva para `APPROVED` ou `REJECTED` (o aluno reenvia e volta a `SUBMITTED`); `LATE` é aplicado pelo agendador em tarefas `PENDING`/`IN_PROGRESS` com prazo vencido. `IN_PROGRESS` existe no schema e no agendador, mas **nenhuma tela/endpoint o define hoje** — só aparece nos dados do seed. Se perguntarem, diga que é um estado previsto para o futuro.
 - **Entrega versionada:** cada envio cria uma nova versão; só a mais recente é `is_current = true`. **Só a versão atual pode ser avaliada** (409 nas antigas). O envio trava a linha da tarefa (`SELECT … FOR UPDATE`) para duas entregas simultâneas não gerarem duas "atuais".
+- **Quem entrega:** só aluno integrante da equipe (staff recebe 403). Ao entregar, os **admins** são notificados por e-mail (`FILE_SUBMITTED`); ao avaliar, quem enviou é notificado.
+- **Lembretes:** o **manual** (`{manual:true}`) grava já como enviado e manda e-mail a **todos os integrantes** da equipe; o **agendado** (`{remindAt}`) fica pendente até o agendador (a cada 5 min, também roda ao subir) enviar o `DEADLINE_REMINDER` e marcá-lo como enviado.
 - **Arquivo ou link:** upload (PDF, PNG, JPEG, MP4, até 50 MB) **ou** link externo (Pitch Vídeo — `is_external_link = true`; só `http/https`).
 - **Segurança do upload** (`upload.ts`, `file-signature.ts`): tipo permitido por lista; a **extensão gravada vem do tipo**, não do nome do arquivo; a **assinatura real (magic bytes)** precisa bater com o tipo. Motivo: `/uploads` é servido na mesma origem do app, então um `.html` disfarçado seria perigoso.
 - **Prontidão para o InovAMF** (`is_ready_for_inovamf`): equipe na etapa 6 **e** todas as tarefas da etapa 6 aprovadas. Recalculada ao criar tarefa, avaliar entrega e mudar de etapa.
-- **Cadastro (RF-02):** find-or-create de aluno por e-mail (quem já existe não duplica; um aluno pode estar em 2 equipes), registra o consentimento LGPD (RNF-02), cria equipe + integrantes + histórico na etapa 1 e notifica o admin.
+- **Cadastro (RF-02)** (`teams.service.createTeam`), tudo numa transação: find-or-create de aluno por e-mail (quem já existe não duplica; um aluno pode estar em 2 equipes; e-mail de admin/mentor é recusado com 403), consentimento LGPD (RNF-02) gravado no líder, cria equipe + integrantes (1 líder) + histórico na etapa 1. Depois da transação: audita (`TEAM_REGISTERED`), envia o **link de primeiro acesso** para quem teve conta criada agora, notifica os admins e **já abre a sessão do líder** (ele entra logado).
 - **Prazo é data pura** (`YYYY-MM-DD`, sem fuso) de ponta a ponta — evita mostrar um dia antes.
 - **Auditoria (RNF-05):** ações relevantes gravam quem, o quê e quando em `audit_logs`.
 - **E-mail:** interface `EmailSender`; em produção usa o **mail-service** da dupla (hospedado no Render, que "dorme": o primeiro envio pode demorar). Por isso o envio é **em segundo plano com 4 tentativas** (esperas 4 s/15 s/45 s): o usuário não espera e o cold start só atrasa. Contas do seed usam domínios fictícios e **não** disparam e-mail real (`MAIL_SKIP_DOMAINS`).
