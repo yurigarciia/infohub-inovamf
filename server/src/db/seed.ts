@@ -61,6 +61,8 @@ const USERS: SeedUser[] = [
   { slug: "admin-1", name: "Ana Beatriz Souza", email: "ana.souza@infohub.amf.br", phone: "(55) 99999-0001", role: "ADMIN", createdDays: -120 },
   { slug: "mentor-1", name: "Carlos Eduardo Lima", email: "carlos.lima@infohub.amf.br", phone: "(55) 99999-0002", role: "MENTOR", createdDays: -110 },
   { slug: "mentor-2", name: "Fernanda Ribeiro", email: "fernanda.ribeiro@infohub.amf.br", phone: "(55) 99999-0003", role: "MENTOR", createdDays: -100 },
+  { slug: "mentor-3", name: "Ricardo Menezes", email: "ricardo.menezes@infohub.amf.br", phone: "(55) 99999-0004", role: "MENTOR", createdDays: -95 },
+  { slug: "mentor-4", name: "Patrícia Duarte", email: "patricia.duarte@infohub.amf.br", phone: "(55) 99999-0005", role: "MENTOR", createdDays: -90 },
   { slug: "student-1", name: "João Pedro Alves", email: "joao.alves@acad.amf.br", phone: "(55) 98888-0001", role: "STUDENT", createdDays: -60, course: "Sistemas de Informação", period: "5º período" },
   { slug: "student-2", name: "Marina Costa", email: "marina.costa@acad.amf.br", phone: "(55) 98888-0002", role: "STUDENT", createdDays: -60, course: "Administração", period: "3º período" },
   { slug: "student-3", name: "Lucas Martins", email: "lucas.martins@acad.amf.br", phone: "(55) 98888-0003", role: "STUDENT", createdDays: -55, course: "Sistemas de Informação", period: "7º período" },
@@ -70,9 +72,6 @@ const USERS: SeedUser[] = [
   { slug: "student-7", name: "Gustavo Pereira", email: "gustavo.pereira@acad.amf.br", phone: "(55) 98888-0007", role: "STUDENT", createdDays: -45, course: "Sistemas de Informação", period: "8º período" },
   { slug: "student-8", name: "Juliana Rocha", email: "juliana.rocha@acad.amf.br", phone: "(55) 98888-0008", role: "STUDENT", createdDays: -45, course: "Administração", period: "5º período" },
   { slug: "student-9", name: "Pedro Henrique Souza", email: "pedro.souza@acad.amf.br", phone: "(55) 98888-0009", role: "STUDENT", createdDays: -40, course: "Sistemas de Informação", period: "3º período" },
-  { slug: "student-10", name: "Larissa Almeida", email: "larissa.almeida@acad.amf.br", phone: "(55) 98888-0010", role: "STUDENT", createdDays: -40, course: "Engenharia de Software", period: "6º período" },
-  { slug: "student-11", name: "Thiago Nascimento", email: "thiago.nascimento@acad.amf.br", phone: "(55) 98888-0011", role: "STUDENT", createdDays: -90, course: "Sistemas de Informação", period: "4º período" },
-  { slug: "student-12", name: "Vitória Campos", email: "vitoria.campos@acad.amf.br", phone: "(55) 98888-0012", role: "STUDENT", createdDays: -200, course: "Administração", period: "8º período" },
 ];
 
 interface SeedTeam {
@@ -92,49 +91,35 @@ const COHORT = "2026.2";
 const PREV_COHORT = "2026.1";
 
 const TEAMS: SeedTeam[] = [
-  { slug: "team-1", ideaName: "EstudaFácil", ideaDescription: "Plataforma de resumos colaborativos para estudantes do ensino médio, com trilhas de estudo geradas a partir do histórico de dificuldades.", areaId: 1, maturity: "IDEA", source: "Indicação de um professor", cohort: COHORT, currentStage: 1, ready: false, createdDays: -10 },
-  { slug: "team-2", ideaName: "SaúdeConecta", ideaDescription: "App que conecta pacientes de UBS a horários vagos de consulta em tempo real, reduzindo filas e faltas.", areaId: 2, maturity: "PROTOTYPE", source: "Instagram do InfoHub", cohort: COHORT, currentStage: 2, ready: false, createdDays: -25 },
-  { slug: "team-3", ideaName: "EcoRota", ideaDescription: "Ferramenta de roteirização para coleta seletiva em pequenos municípios, otimizando custo de combustível das cooperativas.", areaId: 4, maturity: "PROTOTYPE", source: "Feira de profissões da faculdade", cohort: COHORT, currentStage: 3, ready: false, createdDays: -40 },
-  { slug: "team-4", ideaName: "FinPlan", ideaDescription: "Assistente de planejamento financeiro para MEIs, com projeção de fluxo de caixa a partir de notas fiscais emitidas.", areaId: 5, maturity: "MVP_IN_PROGRESS", source: "Indicação de um professor", cohort: COHORT, currentStage: 4, ready: false, createdDays: -55 },
-  { slug: "team-5", ideaName: "TechMentor", ideaDescription: "Marketplace de mentoria técnica entre alunos veteranos e calouros de cursos de tecnologia da região.", areaId: 3, maturity: "MVP_IN_PROGRESS", source: "Amigos que já passaram pelo InfoHub", cohort: COHORT, currentStage: 5, ready: false, createdDays: -70 },
-  { slug: "team-6", ideaName: "AgroSmart", ideaDescription: "Sensor de baixo custo para monitoramento de umidade do solo em pequenas propriedades rurais, com alertas via app.", areaId: 4, maturity: "MVP_READY", source: "Professor de Engenharia", cohort: COHORT, currentStage: 6, ready: true, createdDays: -90 },
-  { slug: "team-7", ideaName: "EcoVerde", ideaDescription: "Marketplace de compostagem compartilhada entre condomínios e hortas comunitárias.", areaId: 4, maturity: "MVP_READY", source: "Feira de profissões da faculdade", cohort: PREV_COHORT, currentStage: 6, ready: true, createdDays: -260 },
+  { slug: "team-1", ideaName: "EstudaFácil", ideaDescription: "Plataforma de resumos colaborativos para estudantes do ensino médio, com trilhas de estudo geradas a partir do histórico de dificuldades.", areaId: 1, maturity: "IDEA", source: "Indicação de um professor", cohort: COHORT, currentStage: 2, ready: false, createdDays: -30 },
+  { slug: "team-2", ideaName: "SaúdeConecta", ideaDescription: "App que conecta pacientes de UBS a horários vagos de consulta em tempo real, reduzindo filas e faltas.", areaId: 2, maturity: "PROTOTYPE", source: "Instagram do InfoHub", cohort: COHORT, currentStage: 2, ready: false, createdDays: -32 },
+  { slug: "team-3", ideaName: "FinPlan", ideaDescription: "Assistente de planejamento financeiro para MEIs, com projeção de fluxo de caixa a partir de notas fiscais emitidas.", areaId: 5, maturity: "MVP_IN_PROGRESS", source: "Indicação de um professor", cohort: COHORT, currentStage: 3, ready: false, createdDays: -55 },
 ];
 
 // [teamSlug, userSlug, role]
 const MEMBERS: [string, string, "LEADER" | "MEMBER"][] = [
-  ["team-1", "student-1", "LEADER"], ["team-1", "student-2", "MEMBER"],
-  ["team-2", "student-3", "LEADER"], ["team-2", "student-4", "MEMBER"],
-  ["team-3", "student-5", "LEADER"], ["team-3", "student-6", "MEMBER"],
-  ["team-4", "student-7", "LEADER"], ["team-4", "student-8", "MEMBER"],
-  ["team-5", "student-9", "LEADER"], ["team-5", "student-10", "MEMBER"],
-  ["team-6", "student-11", "LEADER"], ["team-6", "student-4", "MEMBER"], // Beatriz em 2 equipes (A4)
-  ["team-7", "student-12", "LEADER"],
+  ["team-1", "student-1", "LEADER"], ["team-1", "student-2", "MEMBER"], ["team-1", "student-3", "MEMBER"],
+  ["team-2", "student-4", "LEADER"], ["team-2", "student-5", "MEMBER"], ["team-2", "student-6", "MEMBER"],
+  ["team-3", "student-7", "LEADER"], ["team-3", "student-8", "MEMBER"], ["team-3", "student-9", "MEMBER"],
 ];
 
 // [teamSlug, mentorSlug]
 const MENTORS: [string, string][] = [
-  ["team-1", "mentor-1"], ["team-2", "mentor-1"],
-  ["team-3", "mentor-1"], ["team-3", "mentor-2"], // 2 mentores (N:N)
-  ["team-4", "mentor-2"], ["team-5", "mentor-2"], ["team-6", "mentor-2"], ["team-7", "mentor-1"],
+  ["team-1", "mentor-1"], ["team-2", "mentor-1"], // Carlos atende 2 equipes
+  ["team-3", "mentor-2"],                          // Fernanda atende a terceira
 ];
 
 // [teamSlug, stageId, enteredDays, exitedDays|null, changedBySlug|null]
 const HISTORY: [string, number, number, number | null, string | null][] = [
-  ["team-1", 1, -10, null, null],
-  ["team-2", 1, -25, -20, null], ["team-2", 2, -20, null, "admin-1"],
-  ["team-3", 1, -40, -35, null], ["team-3", 2, -35, -28, "admin-1"], ["team-3", 3, -28, null, "mentor-1"],
-  ["team-4", 1, -55, -48, null], ["team-4", 2, -48, -40, "admin-1"], ["team-4", 3, -40, -30, "mentor-2"], ["team-4", 4, -30, null, "mentor-2"],
-  ["team-5", 1, -70, -63, null], ["team-5", 2, -63, -55, "admin-1"], ["team-5", 3, -55, -42, "mentor-2"], ["team-5", 4, -42, -15, "mentor-2"], ["team-5", 5, -15, null, "mentor-2"],
-  ["team-6", 1, -90, -82, null], ["team-6", 2, -82, -74, "admin-1"], ["team-6", 3, -74, -60, "mentor-2"], ["team-6", 4, -60, -45, "mentor-2"], ["team-6", 5, -45, -20, "mentor-2"], ["team-6", 6, -20, null, "mentor-2"],
-  ["team-7", 6, -260, null, "mentor-1"],
+  ["team-1", 1, -30, -25, null], ["team-1", 2, -25, null, "admin-1"],
+  ["team-2", 1, -32, -26, null], ["team-2", 2, -26, null, "admin-1"],
+  ["team-3", 1, -55, -48, null], ["team-3", 2, -48, -40, "admin-1"], ["team-3", 3, -40, null, "mentor-2"],
 ];
 
 // [teamSlug, authorSlug, content, createdDays]
 const NOTES: [string, string, string, number][] = [
-  ["team-3", "mentor-1", "Equipe engajada, mas depende muito da Camila pra parte de design. Vale reforçar a divisão de tarefas no próximo encontro.", -5],
-  ["team-4", "mentor-2", "Atraso no VPD foi por causa de prova final da faculdade do Gustavo. Combinei novo prazo verbalmente, mas precisa formalizar no sistema.", -2],
-  ["team-6", "mentor-2", "Pitch muito bom na primeira gravação. Só reforcei clareza na parte de monetização antes da inscrição final.", -6],
+  ["team-1", "mentor-1", "Equipe animada; já agendamos o Encontro 1 para a próxima semana.", -4],
+  ["team-3", "mentor-2", "Atraso no problema/público-alvo foi por causa de provas finais. Combinei novo prazo verbalmente, mas precisa formalizar no sistema.", -2],
 ];
 
 // [templateSlug, stageId, title, description]
@@ -150,21 +135,13 @@ interface SeedTask {
 }
 
 const TASKS: SeedTask[] = [
-  { slug: "task-1", team: "team-1", stage: 1, template: null, title: "Aguardar contato do InfoHub", description: "A equipe InfoHub vai analisar a ideia enviada e agendar o 1º encontro.", dueDays: 5, status: "PENDING", createdBy: "admin-1", createdDays: -10, updatedDays: -10 },
-  { slug: "task-2", team: "team-2", stage: 2, template: null, title: "Confirmar agendamento do 1º encontro", description: "Escolher um horário disponível para o Encontro 1 com o mentor.", dueDays: 3, status: "IN_PROGRESS", createdBy: "admin-1", createdDays: -5, updatedDays: -1 },
-  { slug: "task-3", team: "team-3", stage: 3, template: "template-3", title: "Definir problema, público-alvo e solução", description: "Enviar o documento definido no Encontro 1.", dueDays: -1, status: "SUBMITTED", createdBy: "mentor-1", createdDays: -14, updatedDays: -1 },
-  { slug: "task-4", team: "team-4", stage: 4, template: "template-4", title: "Enviar Value Proposition Design", description: "Anexar o VPD construído no Encontro 2.", dueDays: -6, status: "LATE", createdBy: "mentor-2", createdDays: -20, updatedDays: -6 },
-  { slug: "task-9", team: "team-4", stage: 4, template: null, title: "Enviar documentos complementares", description: "Comprovante de MEI de ao menos um integrante, exigido pelo edital deste ciclo.", dueDays: -10, status: "REJECTED", createdBy: "mentor-2", createdDays: -18, updatedDays: -9 },
-  { slug: "task-5", team: "team-5", stage: 5, template: "template-5", title: "Enviar Business Model Canvas", description: "Anexar o Canvas construído no Encontro 3.", dueDays: -12, status: "APPROVED", createdBy: "mentor-2", createdDays: -25, updatedDays: -11 },
-  { slug: "task-6", team: "team-5", stage: 5, template: null, title: "Preparar roteiro do Pitch", description: "Rascunho do roteiro do Pitch Vídeo, para revisão do mentor antes da gravação final.", dueDays: 4, status: "PENDING", createdBy: "mentor-2", createdDays: -3, updatedDays: -3 },
-  { slug: "task-10", team: "team-5", stage: 3, template: "template-3", title: "Definir problema, público-alvo e solução", description: "Enviar o documento definido no Encontro 1.", dueDays: -45, status: "APPROVED", createdBy: "mentor-2", createdDays: -54, updatedDays: -43 },
-  { slug: "task-11", team: "team-5", stage: 4, template: "template-4", title: "Enviar Value Proposition Design", description: "Anexar o VPD construído no Encontro 2.", dueDays: -20, status: "APPROVED", createdBy: "mentor-2", createdDays: -41, updatedDays: -18 },
-  { slug: "task-7", team: "team-6", stage: 6, template: "template-6", title: "Enviar Pitch Vídeo", description: "Link do vídeo no YouTube ou Google Drive (não é upload de arquivo — Q3).", dueDays: -18, status: "APPROVED", createdBy: "mentor-2", createdDays: -30, updatedDays: -17 },
-  { slug: "task-8", team: "team-6", stage: 6, template: null, title: "Conferência de documentos e Canvas final", description: "Reenviar o Canvas final consolidado, com os ajustes pedidos na primeira revisão.", dueDays: -15, status: "SUBMITTED", createdBy: "mentor-2", createdDays: -28, updatedDays: -3 },
-  { slug: "task-12", team: "team-6", stage: 3, template: "template-3", title: "Definir problema, público-alvo e solução", description: "Enviar o documento definido no Encontro 1.", dueDays: -63, status: "APPROVED", createdBy: "mentor-2", createdDays: -73, updatedDays: -61 },
-  { slug: "task-13", team: "team-6", stage: 4, template: "template-4", title: "Enviar Value Proposition Design", description: "Anexar o VPD construído no Encontro 2.", dueDays: -48, status: "APPROVED", createdBy: "mentor-2", createdDays: -59, updatedDays: -46 },
-  { slug: "task-14", team: "team-6", stage: 5, template: "template-5", title: "Enviar Business Model Canvas", description: "Anexar o Canvas construído no Encontro 3.", dueDays: -25, status: "APPROVED", createdBy: "mentor-2", createdDays: -44, updatedDays: -23 },
-  { slug: "task-15", team: "team-4", stage: 3, template: "template-3", title: "Definir problema, público-alvo e solução", description: "Enviar o documento definido no Encontro 1.", dueDays: -33, status: "APPROVED", createdBy: "mentor-2", createdDays: -39, updatedDays: -31 },
+  { slug: "task-1", team: "team-1", stage: 1, template: null, title: "Enviar formulário da ideia", description: "Formulário de inscrição da ideia, avaliado pela equipe InfoHub.", dueDays: -26, status: "APPROVED", createdBy: "admin-1", createdDays: -30, updatedDays: -25 },
+  { slug: "task-2", team: "team-1", stage: 2, template: null, title: "Confirmar agendamento do 1º encontro", description: "Escolher um horário disponível para o Encontro 1 com o mentor.", dueDays: 3, status: "IN_PROGRESS", createdBy: "admin-1", createdDays: -5, updatedDays: -1 },
+  { slug: "task-3", team: "team-2", stage: 1, template: null, title: "Enviar formulário da ideia", description: "Formulário de inscrição da ideia, avaliado pela equipe InfoHub.", dueDays: -27, status: "APPROVED", createdBy: "admin-1", createdDays: -32, updatedDays: -26 },
+  { slug: "task-4", team: "team-2", stage: 2, template: null, title: "Confirmar agendamento do 1º encontro", description: "Escolher um horário disponível para o Encontro 1 com o mentor.", dueDays: 4, status: "PENDING", createdBy: "admin-1", createdDays: -4, updatedDays: -4 },
+  { slug: "task-5", team: "team-3", stage: 1, template: null, title: "Enviar formulário da ideia", description: "Formulário de inscrição da ideia, avaliado pela equipe InfoHub.", dueDays: -49, status: "APPROVED", createdBy: "admin-1", createdDays: -55, updatedDays: -48 },
+  { slug: "task-6", team: "team-3", stage: 3, template: "template-3", title: "Definir problema, público-alvo e solução", description: "Enviar o documento definido no Encontro 1.", dueDays: -6, status: "LATE", createdBy: "mentor-2", createdDays: -20, updatedDays: -6 },
+  { slug: "task-7", team: "team-3", stage: 3, template: null, title: "Preparar apresentação da ideia", description: "Slides curtos com a ideia, para o Encontro 2.", dueDays: 7, status: "PENDING", createdBy: "mentor-2", createdDays: -3, updatedDays: -3 },
 ];
 
 interface SeedSubmission {
@@ -175,26 +152,16 @@ interface SeedSubmission {
 }
 
 const SUBS: SeedSubmission[] = [
-  { slug: "sub-3-1", task: "task-3", by: "student-5", fileUrl: "https://storage.infohub.amf.br/mock/ecorota-problema-publico-alvo.pdf", external: false, version: 1, current: true, submittedDays: -1, review: "PENDING", comment: null, reviewedBy: null, reviewedDays: null },
-  { slug: "sub-9-1", task: "task-9", by: "student-7", fileUrl: "https://storage.infohub.amf.br/mock/finplan-comprovante-mei.pdf", external: false, version: 1, current: true, submittedDays: -9, review: "REJECTED", comment: "O comprovante enviado está vencido. Envie a certidão MEI atualizada (emitida nos últimos 90 dias).", reviewedBy: "mentor-2", reviewedDays: -8 },
-  { slug: "sub-5-1", task: "task-5", by: "student-9", fileUrl: "https://storage.infohub.amf.br/mock/techmentor-bmc.pdf", external: false, version: 1, current: true, submittedDays: -12, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -11 },
-  { slug: "sub-7-1", task: "task-7", by: "student-11", fileUrl: "https://www.youtube.com/watch?v=agrosmart-pitch-mock", external: true, version: 1, current: true, submittedDays: -18, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -17 },
-  { slug: "sub-8-1", task: "task-8", by: "student-11", fileUrl: "https://storage.infohub.amf.br/mock/agrosmart-canvas-final-v1.pdf", external: false, version: 1, current: false, submittedDays: -14, review: "REJECTED", comment: "Faltou atualizar o bloco de fontes de receita — ainda está igual ao Canvas do Encontro 3.", reviewedBy: "mentor-2", reviewedDays: -12 },
-  { slug: "sub-8-2", task: "task-8", by: "student-11", fileUrl: "https://storage.infohub.amf.br/mock/agrosmart-canvas-final-v2.pdf", external: false, version: 2, current: true, submittedDays: -3, review: "PENDING", comment: null, reviewedBy: null, reviewedDays: null },
-  { slug: "sub-10-1", task: "task-10", by: "student-9", fileUrl: "https://storage.infohub.amf.br/mock/techmentor-problema-publico-alvo.pdf", external: false, version: 1, current: true, submittedDays: -46, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -43 },
-  { slug: "sub-11-1", task: "task-11", by: "student-9", fileUrl: "https://storage.infohub.amf.br/mock/techmentor-vpd.pdf", external: false, version: 1, current: true, submittedDays: -21, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -18 },
-  { slug: "sub-12-1", task: "task-12", by: "student-11", fileUrl: "https://storage.infohub.amf.br/mock/agrosmart-problema-publico-alvo.pdf", external: false, version: 1, current: true, submittedDays: -64, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -61 },
-  { slug: "sub-13-1", task: "task-13", by: "student-11", fileUrl: "https://storage.infohub.amf.br/mock/agrosmart-vpd.pdf", external: false, version: 1, current: true, submittedDays: -49, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -46 },
-  { slug: "sub-14-1", task: "task-14", by: "student-11", fileUrl: "https://storage.infohub.amf.br/mock/agrosmart-bmc.pdf", external: false, version: 1, current: true, submittedDays: -26, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -23 },
-  { slug: "sub-15-1", task: "task-15", by: "student-7", fileUrl: "https://storage.infohub.amf.br/mock/finplan-problema-publico-alvo.pdf", external: false, version: 1, current: true, submittedDays: -34, review: "APPROVED", comment: null, reviewedBy: "mentor-2", reviewedDays: -31 },
+  { slug: "sub-1", task: "task-1", by: "student-1", fileUrl: "https://storage.infohub.amf.br/mock/estudafacil-ideia.pdf", external: false, version: 1, current: true, submittedDays: -29, review: "APPROVED", comment: null, reviewedBy: "admin-1", reviewedDays: -25 },
+  { slug: "sub-3", task: "task-3", by: "student-4", fileUrl: "https://storage.infohub.amf.br/mock/saudeconecta-ideia.pdf", external: false, version: 1, current: true, submittedDays: -31, review: "APPROVED", comment: null, reviewedBy: "admin-1", reviewedDays: -26 },
+  { slug: "sub-5", task: "task-5", by: "student-7", fileUrl: "https://storage.infohub.amf.br/mock/finplan-ideia.pdf", external: false, version: 1, current: true, submittedDays: -54, review: "APPROVED", comment: null, reviewedBy: "admin-1", reviewedDays: -48 },
 ];
 
 // [taskSlug, remindDays, isManual, sent, sentDays|null, createdDays]
 const REMINDERS: [string, number, boolean, boolean, number | null, number][] = [
-  ["task-3", -2, false, true, -2, -14],
-  ["task-4", -7, false, true, -7, -20],
-  ["task-4", -4, true, true, -4, -4],
-  ["task-6", 2, false, false, null, -3],
+  ["task-6", -7, false, true, -7, -20],
+  ["task-6", -4, true, true, -4, -4],
+  ["task-7", 5, false, false, null, -3],
 ];
 
 interface SeedEmail {
@@ -205,15 +172,11 @@ interface SeedEmail {
 }
 
 const EMAILS: SeedEmail[] = [
-  { recipient: "admin-1", type: "NEW_TEAM_REGISTERED", subject: "Novo cadastro recebido: EstudaFácil", team: "team-1", task: null, status: "SENT", providerId: "resend-mock-0001", sentDays: -10, createdDays: -10 },
-  { recipient: "student-3", type: "TASK_ASSIGNED", subject: "Nova tarefa: Confirmar agendamento do 1º encontro", team: "team-2", task: "task-2", status: "SENT", providerId: "resend-mock-0002", sentDays: -5, createdDays: -5 },
-  { recipient: "student-5", type: "DEADLINE_REMINDER", subject: 'Lembrete: prazo da tarefa "Definir problema, público-alvo e solução" está próximo', team: "team-3", task: "task-3", status: "SENT", providerId: "resend-mock-0003", sentDays: -2, createdDays: -2 },
-  { recipient: "student-7", type: "DEADLINE_LATE", subject: "Prazo vencido: Enviar Value Proposition Design", team: "team-4", task: "task-4", status: "SENT", providerId: "resend-mock-0004", sentDays: -6, createdDays: -6 },
-  { recipient: "student-9", type: "SUBMISSION_APPROVED", subject: "Entrega aprovada: Business Model Canvas", team: "team-5", task: "task-5", status: "SENT", providerId: "resend-mock-0005", sentDays: -11, createdDays: -11 },
-  { recipient: "student-7", type: "SUBMISSION_REJECTED", subject: "Ajustes solicitados: Enviar documentos complementares", team: "team-4", task: "task-9", status: "SENT", providerId: "resend-mock-0006", sentDays: -8, createdDays: -8 },
-  { recipient: "admin-1", type: "FILE_SUBMITTED", subject: "Novo arquivo entregue por AgroSmart", team: "team-6", task: "task-8", status: "FAILED", providerId: null, sentDays: null, createdDays: -3 },
-  { recipient: "admin-1", type: "TASK_LATE", subject: "Tarefa atrasada: Enviar Value Proposition Design (FinPlan)", team: "team-4", task: "task-4", status: "RETRIED", providerId: "resend-mock-0008", sentDays: -6, createdDays: -6 },
-  { recipient: "student-7", type: "MANUAL_REMINDER", subject: "Lembrete do mentor: falta pouco para regularizar a FinPlan!", team: "team-4", task: "task-4", status: "SENT", providerId: "resend-mock-0009", sentDays: -4, createdDays: -4 },
+  { recipient: "admin-1", type: "NEW_TEAM_REGISTERED", subject: "Novo cadastro recebido: EstudaFácil", team: "team-1", task: null, status: "SENT", providerId: "demo-0001", sentDays: -30, createdDays: -30 },
+  { recipient: "student-1", type: "TASK_ASSIGNED", subject: "Nova tarefa: Confirmar agendamento do 1º encontro", team: "team-1", task: "task-2", status: "SENT", providerId: "demo-0002", sentDays: -5, createdDays: -5 },
+  { recipient: "student-7", type: "DEADLINE_LATE", subject: "Prazo vencido: Definir problema, público-alvo e solução", team: "team-3", task: "task-6", status: "SENT", providerId: "demo-0003", sentDays: -6, createdDays: -6 },
+  { recipient: "admin-1", type: "TASK_LATE", subject: "Tarefa atrasada: Definir problema, público-alvo e solução (FinPlan)", team: "team-3", task: "task-6", status: "SENT", providerId: "demo-0004", sentDays: -6, createdDays: -6 },
+  { recipient: "student-7", type: "MANUAL_REMINDER", subject: "Lembrete do mentor: falta pouco para regularizar a FinPlan!", team: "team-3", task: "task-6", status: "SENT", providerId: "demo-0005", sentDays: -4, createdDays: -4 },
 ];
 
 export async function seed(): Promise<void> {
@@ -337,11 +300,11 @@ export async function seed(): Promise<void> {
     );
     await c.query(
       "INSERT INTO audit_logs (id, actor_user_id, entity_type, entity_id, action, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-      [randomUUID(), uid("mentor-2"), "task_submission", uid("sub-5-1"), "SUBMISSION_APPROVED", JSON.stringify({ taskId: uid("task-5") }), d(-11)],
+      [randomUUID(), uid("admin-1"), "task_submission", uid("sub-5"), "SUBMISSION_APPROVED", JSON.stringify({ taskId: uid("task-5") }), d(-48)],
     );
     await c.query(
       "INSERT INTO audit_logs (id, actor_user_id, entity_type, entity_id, action, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-      [randomUUID(), uid("mentor-2"), "task_submission", uid("sub-9-1"), "SUBMISSION_REJECTED", JSON.stringify({ taskId: uid("task-9"), reviewComment: "Comprovante vencido." }), d(-8)],
+      [randomUUID(), uid("admin-1"), "team", uid("team-1"), "STAGE_ADVANCED", JSON.stringify({ fromStageId: 1, toStageId: 2 }), d(-25)],
     );
   });
 
@@ -350,7 +313,7 @@ export async function seed(): Promise<void> {
   console.log(`  ${TEAMS.length} equipes, ${TASKS.length} tarefas, ${SUBS.length} entregas`);
   console.log("  login admin:  ana.souza@infohub.amf.br");
   console.log("  login mentor: fernanda.ribeiro@infohub.amf.br");
-  console.log("  login aluno:  joao.alves@acad.amf.br (líder team-1)  /  beatriz.fernandes@acad.amf.br (2 equipes)");
+  console.log("  login aluno:  joao.alves@acad.amf.br (líder team-1)  /  beatriz.fernandes@acad.amf.br (líder team-2)");
 }
 
 // Só auto-executa quando rodado direto (`npm run db:seed` / `tsx src/db/seed.ts`).
