@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "cross-env NODE_ENV=production next build",
+    "start": "cross-env NODE_ENV=production next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^5.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cross-env": "^10.1.0",
     "dotenv": "^16.6.1",
     "lucide-react": "^1.31.0",
     "next": "16.3.1",

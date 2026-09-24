@@ -29,6 +29,10 @@ if [ -f .env ]; then
   set -a; . ./.env; set +a
 fi
 
+# Este é o caminho de PRODUÇÃO: ignora NODE_ENV=development vindo de um .env copiado
+# (isso deixa o Next/React em modo dev e desliga o cookie Secure).
+export NODE_ENV=production
+
 echo "[entrypoint] preparando o banco (aplica db/schema.sql só se estiver vazio)…"
 node server/dist/db/bootstrap.js
 
