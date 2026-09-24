@@ -65,6 +65,7 @@ export async function dispatchDueReminders(): Promise<number> {
         relatedTaskId: r.task_id,
       });
     }
+    // "sent" = entregue à fila de envio (o envio real é em segundo plano, com retentativas)
     await query(`UPDATE task_reminders SET sent = true, sent_at = now() WHERE id = $1`, [r.id]);
   }
   return due.length;

@@ -67,27 +67,39 @@ export class ConsoleEmailSender implements EmailSender {
   }
 }
 
+/** Falha de envio, dizendo se vale tentar de novo (rede/timeout/5xx) ou não (400/401). */
+export class EmailSendError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = "EmailSendError";
+  }
+}
+
 type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
 export interface MailServiceOptions {
   baseUrl: string;
   apiKey: string;
   appUrl: string;
-  /** Timeout por requisição — o envio roda dentro da request do usuário. */
+  /**
+   * Timeout POR TENTATIVA. Generoso de propósito: o mail-service roda num
+   * host que hiberna (cold start de dezenas de segundos) — o envio corre em
+   * segundo plano, então esperar é barato; abortar cedo perderia o e-mail.
+   */
   timeoutMs?: number;
-  /** Quanto tempo pular o serviço depois de uma falha de rede/5xx. */
-  cooldownMs?: number;
   fetchImpl?: FetchLike;
 }
 
 /**
  * Cliente do mail-service (POST /emails, header x-api-key). A API é
  * fire-and-forget: 202 = aceito e enfileirado (ela mesma refaz até 3x).
- * Se o serviço cair, um "circuito" evita segurar cada request do usuário
- * pelo timeout inteiro: por `cooldownMs` as chamadas falham na hora.
+ * Erros de rede/timeout/5xx/408/429 são `retryable`; os demais 4xx (payload
+ * ou chave inválidos) não — repetir não resolve.
  */
 export class MailServiceEmailSender implements EmailSender {
-  private downUntil = 0;
   private readonly baseUrl: string;
   private readonly fetchImpl: FetchLike;
 
@@ -97,10 +109,6 @@ export class MailServiceEmailSender implements EmailSender {
   }
 
   async send(email: OutgoingEmail): Promise<string | null> {
-    if (Date.now() < this.downUntil) {
-      throw new Error("mail-service indisponível (aguardando antes de tentar de novo)");
-    }
-
     let res: Response;
     try {
       res = await this.fetchImpl(`${this.baseUrl}/emails`, {
@@ -111,25 +119,65 @@ export class MailServiceEmailSender implements EmailSender {
           subject: email.subject,
           body: renderEmailHtml(email, this.opts.appUrl),
         }),
-        signal: AbortSignal.timeout(this.opts.timeoutMs ?? 5000),
+        signal: AbortSignal.timeout(this.opts.timeoutMs ?? 45_000),
       });
     } catch (err) {
-      this.downUntil = Date.now() + (this.opts.cooldownMs ?? 30_000);
-      throw new Error(`mail-service inacessível: ${err instanceof Error ? err.message : String(err)}`);
+      throw new EmailSendError(
+        `mail-service inacessível: ${err instanceof Error ? err.message : String(err)}`,
+        true,
+      );
     }
 
-    if (res.status >= 500) {
-      this.downUntil = Date.now() + (this.opts.cooldownMs ?? 30_000);
-      throw new Error(`mail-service com erro (${res.status})`);
+    if (res.status >= 500 || res.status === 408 || res.status === 429) {
+      throw new EmailSendError(`mail-service indisponível (${res.status})`, true);
     }
     if (!res.ok) {
-      // 400/401: problema do payload ou da chave — repetir não resolve, não abre o circuito
       const detail = (await res.text().catch(() => "")).slice(0, 200);
-      throw new Error(`mail-service recusou o envio (${res.status}): ${detail}`);
+      throw new EmailSendError(`mail-service recusou o envio (${res.status}): ${detail}`, false);
     }
 
     const data = (await res.json().catch(() => null)) as { id?: string } | null;
     return data?.id ?? null;
+  }
+}
+
+export interface RetryOptions {
+  /** Espera antes de cada nova tentativa; o nº de tentativas é length + 1. */
+  delaysMs?: readonly number[];
+  sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Tenta de novo (com espera crescente) as falhas `retryable`. Com os
+ * padrões: 4 tentativas em ~1 min + o timeout de cada uma — cobre um cold
+ * start do mail-service. Falha não-retryable (ou qualquer erro que não seja
+ * EmailSendError) sobe na hora.
+ */
+export class RetryingEmailSender implements EmailSender {
+  private readonly delays: readonly number[];
+  private readonly sleep: (ms: number) => Promise<void>;
+
+  constructor(
+    private readonly inner: EmailSender,
+    opts: RetryOptions = {},
+  ) {
+    this.delays = opts.delaysMs ?? [4_000, 15_000, 45_000];
+    this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  }
+
+  async send(email: OutgoingEmail): Promise<string | null> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.inner.send(email);
+      } catch (err) {
+        const retryable = err instanceof EmailSendError && err.retryable;
+        if (!retryable || attempt >= this.delays.length) throw err;
+        console.warn(
+          `[email] tentativa ${attempt + 1} falhou (${(err as Error).message}); nova em ${this.delays[attempt]! / 1000}s`,
+        );
+        await this.sleep(this.delays[attempt]!);
+      }
+    }
   }
 }
 

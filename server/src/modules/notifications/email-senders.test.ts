@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  EmailSendError,
   MailServiceEmailSender,
+  RetryingEmailSender,
   SkipDemoRecipients,
   renderEmailHtml,
   type EmailSender,
@@ -12,14 +14,23 @@ const mail = { to: "ana@exemplo.com", subject: "Nova tarefa: Canvas", body: "Abr
 const res = (status: number, body: unknown = {}): Response =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-function sender(fetchImpl: ReturnType<typeof vi.fn>, cooldownMs = 60_000) {
+function sender(fetchImpl: ReturnType<typeof vi.fn>) {
   return new MailServiceEmailSender({
     baseUrl: "https://mail.exemplo.com/",
     apiKey: "chave-secreta",
     appUrl: APP,
-    cooldownMs,
     fetchImpl,
   });
+}
+
+/** Captura o erro (ou falha o teste se não houve). */
+async function errorOf(p: Promise<unknown>): Promise<EmailSendError> {
+  try {
+    await p;
+  } catch (e) {
+    return e as EmailSendError;
+  }
+  throw new Error("esperava que o envio falhasse");
 }
 
 describe("MailServiceEmailSender", () => {
@@ -39,36 +50,79 @@ describe("MailServiceEmailSender", () => {
     expect(payload.body).toContain("Abra o app.");
   });
 
-  it("400/401: lança e NÃO abre o circuito (repetir não resolve, mas outros envios seguem)", async () => {
-    const f = vi.fn().mockResolvedValue(res(401, { message: "Unauthorized" }));
-    const s = sender(f);
-    await expect(s.send(mail)).rejects.toThrow(/recusou.*401/);
-    await expect(s.send(mail)).rejects.toThrow(/recusou.*401/);
-    expect(f).toHaveBeenCalledTimes(2); // tentou de novo: circuito fechado
+  it.each([400, 401, 403])("%i: erro NÃO retryable (repetir não resolve)", async (status) => {
+    const err = await errorOf(sender(vi.fn().mockResolvedValue(res(status, { message: "x" }))).send(mail));
+    expect(err).toBeInstanceOf(EmailSendError);
+    expect(err.retryable).toBe(false);
+    expect(err.message).toContain(String(status));
   });
 
-  it("5xx: lança e abre o circuito — a chamada seguinte falha sem tocar na rede", async () => {
+  it.each([408, 429, 500, 502, 503])("%i: erro retryable (serviço acordando/sobrecarregado)", async (status) => {
+    const err = await errorOf(sender(vi.fn().mockResolvedValue(res(status))).send(mail));
+    expect(err.retryable).toBe(true);
+  });
+
+  it("falha de rede / timeout: retryable", async () => {
+    const err = await errorOf(sender(vi.fn().mockRejectedValue(new Error("ECONNRESET"))).send(mail));
+    expect(err.retryable).toBe(true);
+    expect(err.message).toContain("ECONNRESET");
+  });
+
+  it("timeout por tentativa é longo (cold start), não os 5 s de antes", async () => {
+    const f = vi.fn().mockResolvedValue(res(202, { id: "x" }));
+    await sender(f).send(mail);
+    // AbortSignal.timeout(45000): sem como ler o valor, garante ao menos que há um signal
+    expect(f.mock.calls[0]![1].signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("RetryingEmailSender (cold start do mail-service)", () => {
+  const noWait = () => vi.fn().mockResolvedValue(undefined);
+
+  it("sobrevive a um cold start: 503, 503 e depois aceita", async () => {
+    const f = vi.fn().mockResolvedValueOnce(res(503)).mockResolvedValueOnce(res(502)).mockResolvedValue(res(202, { id: "ok-1" }));
+    const sleep = noWait();
+    const r = new RetryingEmailSender(sender(f), { delaysMs: [10, 20, 30], sleep });
+
+    await expect(r.send(mail)).resolves.toBe("ok-1");
+    expect(f).toHaveBeenCalledTimes(3);
+    expect(sleep.mock.calls.map((c) => c[0])).toEqual([10, 20]); // backoff crescente
+  });
+
+  it("também recupera de timeout/queda de rede na 1ª tentativa", async () => {
+    const f = vi.fn().mockRejectedValueOnce(new Error("timeout")).mockResolvedValue(res(202, { id: "ok-2" }));
+    const r = new RetryingEmailSender(sender(f), { delaysMs: [1], sleep: noWait() });
+    await expect(r.send(mail)).resolves.toBe("ok-2");
+  });
+
+  it("erro 401 NÃO é repetido", async () => {
+    const f = vi.fn().mockResolvedValue(res(401));
+    const sleep = noWait();
+    const err = await errorOf(new RetryingEmailSender(sender(f), { delaysMs: [1, 2], sleep }).send(mail));
+    expect(err.retryable).toBe(false);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("esgota as tentativas (delays + 1) e lança o último erro", async () => {
     const f = vi.fn().mockResolvedValue(res(503));
-    const s = sender(f);
-    await expect(s.send(mail)).rejects.toThrow(/erro \(503\)/);
-    await expect(s.send(mail)).rejects.toThrow(/indisponível/);
-    expect(f).toHaveBeenCalledTimes(1);
+    const err = await errorOf(new RetryingEmailSender(sender(f), { delaysMs: [1, 2, 3], sleep: noWait() }).send(mail));
+    expect(err.retryable).toBe(true);
+    expect(f).toHaveBeenCalledTimes(4);
   });
 
-  it("falha de rede/timeout: lança e abre o circuito", async () => {
-    const f = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
-    const s = sender(f);
-    await expect(s.send(mail)).rejects.toThrow(/inacessível.*ECONNREFUSED/);
-    await expect(s.send(mail)).rejects.toThrow(/indisponível/);
-    expect(f).toHaveBeenCalledTimes(1);
+  it("erro que não é EmailSendError sobe sem repetir", async () => {
+    const inner: EmailSender = { send: vi.fn().mockRejectedValue(new TypeError("bug")) };
+    await expect(new RetryingEmailSender(inner, { delaysMs: [1], sleep: noWait() }).send(mail)).rejects.toThrow("bug");
+    expect(inner.send).toHaveBeenCalledTimes(1);
   });
 
-  it("depois do cooldown volta a tentar", async () => {
-    const f = vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValue(res(202, { id: "ok" }));
-    const s = sender(f, 0); // sem espera
-    await expect(s.send(mail)).rejects.toThrow();
-    await new Promise((r) => setTimeout(r, 5));
-    await expect(s.send(mail)).resolves.toBe("ok");
+  it("padrões: 3 esperas (4 tentativas) — cobre ~1 min de cold start", async () => {
+    const inner: EmailSender = { send: vi.fn().mockRejectedValue(new EmailSendError("x", true)) };
+    const sleep = noWait();
+    await new RetryingEmailSender(inner, { sleep }).send(mail).catch(() => undefined);
+    expect(inner.send).toHaveBeenCalledTimes(4);
+    expect(sleep.mock.calls.map((c) => c[0])).toEqual([4_000, 15_000, 45_000]);
   });
 });
 

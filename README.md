@@ -159,7 +159,7 @@ Outros scripts da raiz: `npm run build`, `npm run start`, `npm run lint` (app), 
 | `COOKIE_SECURE` | `true` em produção | flag Secure do cookie de refresh; `false` só p/ HTTP puro |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL_DAYS` | `15m` / `30` | validade dos tokens |
 | `BCRYPT_ROUNDS` | `10` | custo do hash de senha |
-| `MAIL_API_URL` / `MAIL_API_KEY` | mail-service / vazio | envio real de e-mail pelo mail-service (`POST /emails`, `x-api-key`). Sem a chave, só loga no console |
+| `MAIL_API_URL` / `MAIL_API_KEY` | mail-service / vazio | envio real de e-mail pelo mail-service (`POST /emails`, `x-api-key`), **em segundo plano com retentativas** (cobre o cold start do serviço). Sem a chave, só loga no console |
 | `MAIL_SKIP_DOMAINS` | `acad.amf.br,infohub.amf.br` | contas de demonstração (seed) **não** recebem e-mail real — só log |
 | `UPLOAD_DIR` / `MAX_UPLOAD_MB` | `uploads` / `50` | entregas de arquivo (RNF-04) |
 
