@@ -124,7 +124,8 @@ export async function getTeamDetail(actor: Actor, teamId: string): Promise<TeamD
   const [mentors, stageHistory, notes] = await Promise.all([
     repo.listMentors(teamId),
     repo.listStageHistory(teamId),
-    actor.role === "STUDENT" ? Promise.resolve<TeamNoteRow[]>([]) : repo.listNotes(teamId),
+    actor.role === "STUDENT" ? Promise.resolve<TeamNoteRow[]>([])
+     : repo.listNotes(teamId),
   ]);
   return { ...board!, mentors, stageHistory, notes };
 }
